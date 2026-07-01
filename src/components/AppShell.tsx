@@ -135,9 +135,9 @@ function SidebarInner({
         {NAV.map(({ to, label, icon: Icon }) => {
           const active = pathname === to || pathname.startsWith(to + "/");
           return (
-            <Link
+            <a
               key={to}
-              to={to}
+              href={to}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 active
@@ -147,7 +147,7 @@ function SidebarInner({
             >
               <Icon className="h-4 w-4" />
               {label}
-            </Link>
+            </a>
           );
         })}
       </nav>
