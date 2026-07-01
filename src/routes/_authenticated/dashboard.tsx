@@ -34,12 +34,14 @@ function Dashboard() {
         supabase.from("orders").select("total").eq("store_id", store.id).gte("created_at", startDay.toISOString()),
         supabase.from("orders").select("id").eq("store_id", store.id).gte("created_at", startWeek.toISOString()),
         supabase.from("orders").select("total").eq("store_id", store.id).gte("created_at", startMonth.toISOString()),
-        supabase.from("order_items").select("product_name, quantity").eq("store_id", store.id).gte("created_at", startMonth.toISOString()).limit(500),
+        supabase.from("order_items").select("quantity, product:products(name, store_id)").gte("created_at", startMonth.toISOString()).limit(500),
       ]);
 
       const map = new Map<string, number>();
-      (top ?? []).forEach((r: { product_name: string; quantity: number }) => {
-        map.set(r.product_name, (map.get(r.product_name) ?? 0) + r.quantity);
+      (top ?? []).forEach((r) => {
+        const row = r as { quantity: number; product: { name: string; store_id: string } | null };
+        if (!row.product || row.product.store_id !== store.id) return;
+        map.set(row.product.name, (map.get(row.product.name) ?? 0) + row.quantity);
       });
       const topProduct = [...map.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] ?? null;
 
