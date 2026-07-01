@@ -121,10 +121,10 @@ function SidebarInner({
   return (
     <>
       <div className="h-14 flex items-center px-4 border-b border-border justify-between">
-        <Link to="/dashboard" className="flex items-center gap-2 font-bold text-lg">
+        <a href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
           <span className="text-primary">Pronto</span>
           <span>Pede</span>
-        </Link>
+        </a>
         {onClose && (
           <button onClick={onClose} className="p-1 rounded hover:bg-accent" aria-label="Fechar">
             <X className="h-4 w-4" />
