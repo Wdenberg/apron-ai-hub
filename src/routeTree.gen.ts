@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LojaSlugRouteImport } from './routes/loja.$slug'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -29,6 +30,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LojaSlugRoute = LojaSlugRouteImport.update({
+  id: '/loja/$slug',
+  path: '/loja/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedProdutosRoute = AuthenticatedProdutosRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/loja/$slug': typeof LojaSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/loja/$slug': typeof LojaSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
+  '/loja/$slug': typeof LojaSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,8 +96,16 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pedidos'
     | '/produtos'
+    | '/loja/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/onboarding' | '/pedidos' | '/produtos'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/onboarding'
+    | '/pedidos'
+    | '/produtos'
+    | '/loja/$slug'
   id:
     | '__root__'
     | '/'
@@ -98,12 +115,14 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/pedidos'
     | '/_authenticated/produtos'
+    | '/loja/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  LojaSlugRoute: typeof LojaSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -127,6 +146,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loja/$slug': {
+      id: '/loja/$slug'
+      path: '/loja/$slug'
+      fullPath: '/loja/$slug'
+      preLoaderRoute: typeof LojaSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/produtos': {
@@ -181,6 +207,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  LojaSlugRoute: LojaSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -13,12 +13,7 @@ import { ShoppingBag, MapPin, MessageCircle, Plus, Minus, X } from "lucide-react
 import { z } from "zod";
 
 export const Route = createFileRoute("/loja/$slug")({
-  head: ({ loaderData }) => ({
-    meta: [
-      { title: `${loaderData?.store?.name ?? "Loja"} — ProntoPede` },
-      { name: "description", content: loaderData?.store?.description ?? "Faça seu pedido online." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Loja — ProntoPede" }] }),
   loader: async ({ params }) => {
     const { data: store } = await supabase
       .from("stores")
@@ -153,7 +148,7 @@ function PublicStore() {
               O cardápio está sendo preparado. Volte em breve!
             </div>
           )}
-          {Object.entries(grouped).map(([cat, list]) => (
+          {Object.entries(grouped).map(([cat, list]: [string, typeof products]) => (
             <section key={cat}>
               <h2 className="text-lg font-bold mb-3">{cat}</h2>
               <div className="space-y-3">
