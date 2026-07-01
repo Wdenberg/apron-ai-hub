@@ -152,7 +152,7 @@ function PublicStore() {
             <section key={cat}>
               <h2 className="text-lg font-bold mb-3">{cat}</h2>
               <div className="space-y-3">
-                {(list as typeof products).map((p) => {
+                {list.map((p: (typeof products)[number]) => {
                   const inCart = cart[p.id]?.qty ?? 0;
                   return (
                     <div key={p.id} className="rounded-2xl border border-border bg-card p-4 flex gap-4 items-center">
