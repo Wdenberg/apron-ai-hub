@@ -93,6 +93,7 @@ function PublicStore() {
         _customer_whatsapp: payload.whatsapp,
         _notes: payload.notes || null,
         _items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
+        _customer_user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
       } as never);
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;

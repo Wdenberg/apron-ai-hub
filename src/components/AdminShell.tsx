@@ -2,53 +2,33 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
-  ClipboardList,
-  Package,
   Users,
-  BarChart3,
-  Settings,
+  UserX,
+  Megaphone,
+  ShieldCheck,
   LogOut,
-  Store,
   Menu,
   X,
-  CreditCard,
-  Receipt,
+  Store,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useIsAdmin } from "@/hooks/use-is-admin";
-import { ShieldCheck } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
-  { to: "/produtos", label: "Produtos", icon: Package },
-  { to: "/vendas", label: "Venda rápida", icon: Receipt },
-  { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { to: "/configuracoes", label: "Configurações", icon: Settings },
-  { to: "/assinatura", label: "Assinatura", icon: CreditCard },
+  { to: "/admin/dashboard", label: "Visão geral", icon: LayoutDashboard },
+  { to: "/admin/lojistas", label: "Lojistas", icon: Users },
+  { to: "/admin/trial", label: "Trial & recuperação", icon: UserX },
+  { to: "/admin/campanhas", label: "Campanhas WhatsApp", icon: Megaphone },
+  { to: "/admin/equipe", label: "Equipe (admins)", icon: ShieldCheck },
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AdminShell({ children, title }: { children: ReactNode; title?: string }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
-  const isAdmin = useIsAdmin();
-
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("stores")
-        .select("id, name, slug, is_open, subscription_status, trial_ends_at")
-        .maybeSingle();
-      return data;
-    },
-  });
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -62,14 +42,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-sidebar shrink-0">
-        <SidebarInner storeName={store?.name} onSignOut={signOut} pathname={pathname} />
+        <Inner pathname={pathname} onSignOut={signOut} />
       </aside>
 
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setOpen(false)} />
           <aside className="relative w-64 bg-sidebar h-full flex flex-col">
-            <SidebarInner storeName={store?.name} onSignOut={signOut} pathname={pathname} onClose={() => setOpen(false)} />
+            <Inner pathname={pathname} onSignOut={signOut} onClose={() => setOpen(false)} />
           </aside>
         </div>
       )}
@@ -83,31 +63,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2 font-semibold">
-            <Store className="h-5 w-5 text-primary" />
-            <span className="hidden sm:inline">{store?.name ?? "PRONTOPEDE"}</span>
-          </div>
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <span className="font-semibold">Painel ProntoPede</span>
+          {title && <><span className="text-muted-foreground">/</span><span className="text-sm text-muted-foreground">{title}</span></>}
           <div className="flex-1" />
-          {store?.slug && (
-            <a
-              href={`/loja/${store.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs sm:text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
-            >
-              Ver loja pública
-            </a>
-          )}
-          {store?.subscription_status === "trial" && (
-            <span className="hidden sm:inline text-xs px-2 py-1 rounded-full bg-warning/20 text-warning-foreground font-medium">
-              Teste grátis
-            </span>
-          )}
-          {isAdmin.data && (
-            <a href="/admin/dashboard" className="text-xs px-2 py-1 rounded-full bg-primary/15 text-primary font-medium inline-flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3" /> Admin
-            </a>
-          )}
+          <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+            <Store className="h-3 w-3" /> Sair do modo admin
+          </Link>
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>
@@ -115,24 +77,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function SidebarInner({
-  storeName,
-  onSignOut,
+function Inner({
   pathname,
+  onSignOut,
   onClose,
 }: {
-  storeName?: string | null;
-  onSignOut: () => void;
   pathname: string;
+  onSignOut: () => void;
   onClose?: () => void;
 }) {
   return (
     <>
       <div className="h-14 flex items-center px-4 border-b border-border justify-between">
-        <a href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-primary">Pronto</span>
-          <span>Pede</span>
-        </a>
+        <Link to="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <span>Admin</span>
+        </Link>
         {onClose && (
           <button onClick={onClose} className="p-1 rounded hover:bg-accent" aria-label="Fechar">
             <X className="h-4 w-4" />
@@ -143,9 +103,9 @@ function SidebarInner({
         {NAV.map(({ to, label, icon: Icon }) => {
           const active = pathname === to || pathname.startsWith(to + "/");
           return (
-            <a
+            <Link
               key={to}
-              href={to}
+              to={to}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 active
@@ -155,12 +115,11 @@ function SidebarInner({
             >
               <Icon className="h-4 w-4" />
               {label}
-            </a>
+            </Link>
           );
         })}
       </nav>
       <div className="p-3 border-t border-border">
-        {storeName && <div className="px-3 pb-2 text-xs text-muted-foreground truncate">{storeName}</div>}
         <Button variant="ghost" className="w-full justify-start" onClick={onSignOut}>
           <LogOut className="h-4 w-4 mr-2" /> Sair
         </Button>

@@ -9,18 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MinhasComprasRouteImport } from './routes/minhas-compras'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LojaSlugRouteImport } from './routes/loja.$slug'
+import { Route as AdminTrialRouteImport } from './routes/admin/trial'
+import { Route as AdminLojistasRouteImport } from './routes/admin/lojistas'
+import { Route as AdminEquipeRouteImport } from './routes/admin/equipe'
+import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
+import { Route as AdminCampanhasRouteImport } from './routes/admin/campanhas'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AdminLojistasIdRouteImport } from './routes/admin/lojistas.$id'
 
+const MinhasComprasRoute = MinhasComprasRouteImport.update({
+  id: '/minhas-compras',
+  path: '/minhas-compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -32,10 +51,40 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const LojaSlugRoute = LojaSlugRouteImport.update({
   id: '/loja/$slug',
   path: '/loja/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTrialRoute = AdminTrialRouteImport.update({
+  id: '/trial',
+  path: '/trial',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLojistasRoute = AdminLojistasRouteImport.update({
+  id: '/lojistas',
+  path: '/lojistas',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEquipeRoute = AdminEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminCampanhasRoute = AdminCampanhasRouteImport.update({
+  id: '/campanhas',
+  path: '/campanhas',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AuthenticatedProdutosRoute = AuthenticatedProdutosRouteImport.update({
   id: '/produtos',
@@ -57,81 +106,154 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AdminLojistasIdRoute = AdminLojistasIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminLojistasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/minhas-compras': typeof MinhasComprasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/admin/campanhas': typeof AdminCampanhasRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/minhas-compras': typeof MinhasComprasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/admin/campanhas': typeof AdminCampanhasRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/minhas-compras': typeof MinhasComprasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
+  '/admin/campanhas': typeof AdminCampanhasRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/auth'
+    | '/minhas-compras'
     | '/dashboard'
     | '/onboarding'
     | '/pedidos'
     | '/produtos'
+    | '/admin/campanhas'
+    | '/admin/dashboard'
+    | '/admin/equipe'
+    | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
+    | '/admin/'
+    | '/admin/lojistas/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/minhas-compras'
     | '/dashboard'
     | '/onboarding'
     | '/pedidos'
     | '/produtos'
+    | '/admin/campanhas'
+    | '/admin/dashboard'
+    | '/admin/equipe'
+    | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
+    | '/admin'
+    | '/admin/lojistas/$id'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/admin'
     | '/auth'
+    | '/minhas-compras'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
     | '/_authenticated/pedidos'
     | '/_authenticated/produtos'
+    | '/admin/campanhas'
+    | '/admin/dashboard'
+    | '/admin/equipe'
+    | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
+    | '/admin/'
+    | '/admin/lojistas/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MinhasComprasRoute: typeof MinhasComprasRoute
   LojaSlugRoute: typeof LojaSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/minhas-compras': {
+      id: '/minhas-compras'
+      path: '/minhas-compras'
+      fullPath: '/minhas-compras'
+      preLoaderRoute: typeof MinhasComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -148,12 +270,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/loja/$slug': {
       id: '/loja/$slug'
       path: '/loja/$slug'
       fullPath: '/loja/$slug'
       preLoaderRoute: typeof LojaSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/trial': {
+      id: '/admin/trial'
+      path: '/trial'
+      fullPath: '/admin/trial'
+      preLoaderRoute: typeof AdminTrialRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/lojistas': {
+      id: '/admin/lojistas'
+      path: '/lojistas'
+      fullPath: '/admin/lojistas'
+      preLoaderRoute: typeof AdminLojistasRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/equipe': {
+      id: '/admin/equipe'
+      path: '/equipe'
+      fullPath: '/admin/equipe'
+      preLoaderRoute: typeof AdminEquipeRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/campanhas': {
+      id: '/admin/campanhas'
+      path: '/campanhas'
+      fullPath: '/admin/campanhas'
+      preLoaderRoute: typeof AdminCampanhasRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/_authenticated/produtos': {
       id: '/_authenticated/produtos'
@@ -183,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/admin/lojistas/$id': {
+      id: '/admin/lojistas/$id'
+      path: '/$id'
+      fullPath: '/admin/lojistas/$id'
+      preLoaderRoute: typeof AdminLojistasIdRouteImport
+      parentRoute: typeof AdminLojistasRoute
+    }
   }
 }
 
@@ -203,10 +374,46 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AdminLojistasRouteChildren {
+  AdminLojistasIdRoute: typeof AdminLojistasIdRoute
+}
+
+const AdminLojistasRouteChildren: AdminLojistasRouteChildren = {
+  AdminLojistasIdRoute: AdminLojistasIdRoute,
+}
+
+const AdminLojistasRouteWithChildren = AdminLojistasRoute._addFileChildren(
+  AdminLojistasRouteChildren,
+)
+
+interface AdminRouteRouteChildren {
+  AdminCampanhasRoute: typeof AdminCampanhasRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminEquipeRoute: typeof AdminEquipeRoute
+  AdminLojistasRoute: typeof AdminLojistasRouteWithChildren
+  AdminTrialRoute: typeof AdminTrialRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminCampanhasRoute: AdminCampanhasRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminEquipeRoute: AdminEquipeRoute,
+  AdminLojistasRoute: AdminLojistasRouteWithChildren,
+  AdminTrialRoute: AdminTrialRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  MinhasComprasRoute: MinhasComprasRoute,
   LojaSlugRoute: LojaSlugRoute,
 }
 export const routeTree = rootRouteImport
