@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LojaSlugRouteImport } from './routes/loja.$slug'
+import { Route as AdminTrialRouteImport } from './routes/admin/trial'
 import { Route as AdminLojistasRouteImport } from './routes/admin/lojistas'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
@@ -51,6 +52,11 @@ const LojaSlugRoute = LojaSlugRouteImport.update({
   id: '/loja/$slug',
   path: '/loja/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTrialRoute = AdminTrialRouteImport.update({
+  id: '/trial',
+  path: '/trial',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminLojistasRoute = AdminLojistasRouteImport.update({
   id: '/lojistas',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/lojistas/$id': typeof AdminLojistasIdRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
   '/admin': typeof AdminIndexRoute
   '/admin/lojistas/$id': typeof AdminLojistasIdRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
+  '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/lojistas/$id': typeof AdminLojistasIdRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/admin/dashboard'
     | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
     | '/admin/'
     | '/admin/lojistas/$id'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/admin/dashboard'
     | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
     | '/admin'
     | '/admin/lojistas/$id'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos'
     | '/admin/dashboard'
     | '/admin/lojistas'
+    | '/admin/trial'
     | '/loja/$slug'
     | '/admin/'
     | '/admin/lojistas/$id'
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/loja/$slug'
       preLoaderRoute: typeof LojaSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/trial': {
+      id: '/admin/trial'
+      path: '/trial'
+      fullPath: '/admin/trial'
+      preLoaderRoute: typeof AdminTrialRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/admin/lojistas': {
       id: '/admin/lojistas'
@@ -312,12 +331,14 @@ const AdminLojistasRouteWithChildren = AdminLojistasRoute._addFileChildren(
 interface AdminRouteRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminLojistasRoute: typeof AdminLojistasRouteWithChildren
+  AdminTrialRoute: typeof AdminTrialRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
   AdminLojistasRoute: AdminLojistasRouteWithChildren,
+  AdminTrialRoute: AdminTrialRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
