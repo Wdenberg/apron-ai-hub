@@ -21,6 +21,7 @@ import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AdminLojistasIdRouteImport } from './routes/admin/lojistas.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -81,6 +82,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AdminLojistasIdRoute = AdminLojistasIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminLojistasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,9 +97,10 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/lojistas': typeof AdminLojistasRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/loja/$slug': typeof LojaSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,9 +110,10 @@ export interface FileRoutesByTo {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/lojistas': typeof AdminLojistasRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/loja/$slug': typeof LojaSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -118,9 +126,10 @@ export interface FileRoutesById {
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/lojistas': typeof AdminLojistasRoute
+  '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/loja/$slug': typeof LojaSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/lojistas/$id': typeof AdminLojistasIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/admin/lojistas'
     | '/loja/$slug'
     | '/admin/'
+    | '/admin/lojistas/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/admin/lojistas'
     | '/loja/$slug'
     | '/admin'
+    | '/admin/lojistas/$id'
   id:
     | '__root__'
     | '/'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/admin/lojistas'
     | '/loja/$slug'
     | '/admin/'
+    | '/admin/lojistas/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/admin/lojistas/$id': {
+      id: '/admin/lojistas/$id'
+      path: '/$id'
+      fullPath: '/admin/lojistas/$id'
+      preLoaderRoute: typeof AdminLojistasIdRouteImport
+      parentRoute: typeof AdminLojistasRoute
+    }
   }
 }
 
@@ -278,15 +297,27 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AdminLojistasRouteChildren {
+  AdminLojistasIdRoute: typeof AdminLojistasIdRoute
+}
+
+const AdminLojistasRouteChildren: AdminLojistasRouteChildren = {
+  AdminLojistasIdRoute: AdminLojistasIdRoute,
+}
+
+const AdminLojistasRouteWithChildren = AdminLojistasRoute._addFileChildren(
+  AdminLojistasRouteChildren,
+)
+
 interface AdminRouteRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
-  AdminLojistasRoute: typeof AdminLojistasRoute
+  AdminLojistasRoute: typeof AdminLojistasRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
-  AdminLojistasRoute: AdminLojistasRoute,
+  AdminLojistasRoute: AdminLojistasRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
 
