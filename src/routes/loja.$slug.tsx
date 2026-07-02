@@ -16,10 +16,14 @@ export const Route = createFileRoute("/loja/$slug")({
   head: () => ({ meta: [{ title: "Loja — ProntoPede" }] }),
   loader: async ({ params }) => {
     const { data: store } = await supabase
-      .from("stores")
+      .from("stores_public" as never)
       .select("id, name, slug, description, whatsapp, address, city, state, is_open, logo_url, cover_url")
       .eq("slug", params.slug)
-      .maybeSingle();
+      .maybeSingle<{
+        id: string; name: string; slug: string; description: string | null;
+        whatsapp: string; address: string | null; city: string | null; state: string | null;
+        is_open: boolean; logo_url: string | null; cover_url: string | null;
+      }>();
     if (!store) throw notFound();
     const { data: products } = await supabase
       .from("products")
@@ -83,19 +87,16 @@ function PublicStore() {
 
   const submitOrder = useMutation({
     mutationFn: async (payload: z.infer<typeof checkoutSchema>) => {
-      const { data: order, error } = await supabase.from("orders").insert({
-        store_id: store.id,
-        customer_name: payload.name,
-        customer_whatsapp: payload.whatsapp,
-        notes: payload.notes || null,
-        type: "reserva",
-      }).select("id, order_number").single();
+      const { data, error } = await supabase.rpc("create_public_order" as never, {
+        _store_id: store.id,
+        _customer_name: payload.name,
+        _customer_whatsapp: payload.whatsapp,
+        _notes: payload.notes || null,
+        _items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
+      } as never);
       if (error) throw error;
-      const { error: itemsErr } = await supabase.from("order_items").insert(
-        items.map((i) => ({ order_id: order.id, product_id: i.id, quantity: i.qty, unit_price: i.price })),
-      );
-      if (itemsErr) throw itemsErr;
-      return order;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row as { id: string; order_number: number };
     },
     onSuccess: (order) => {
       const lines = items.map((i) => `• ${i.qty}x ${i.name} — ${formatBRL(i.price * i.qty)}`).join("\n");

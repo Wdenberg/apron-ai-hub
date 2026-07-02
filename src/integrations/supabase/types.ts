@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       order_items: {
@@ -145,6 +152,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       products: {
@@ -193,6 +207,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -307,9 +328,66 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stores_public: {
+        Row: {
+          address: string | null
+          city: string | null
+          cover_url: string | null
+          description: string | null
+          hours: Json | null
+          id: string | null
+          is_open: boolean | null
+          logo_url: string | null
+          name: string | null
+          slug: string | null
+          state: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cover_url?: string | null
+          description?: string | null
+          hours?: Json | null
+          id?: string | null
+          is_open?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          slug?: string | null
+          state?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cover_url?: string | null
+          description?: string | null
+          hours?: Json | null
+          id?: string | null
+          is_open?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          slug?: string | null
+          state?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      create_public_order: {
+        Args: {
+          _customer_name: string
+          _customer_whatsapp: string
+          _items: Json
+          _notes: string
+          _store_id: string
+        }
+        Returns: {
+          id: string
+          order_number: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
