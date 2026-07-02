@@ -53,7 +53,7 @@ function LojistaDetail() {
 
   const changeStatus = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_set_subscription_status", { _store_id: id, _status: newStatus as never, _reason: reason || null });
+      const { error } = await supabase.rpc("admin_set_subscription_status", { _store_id: id, _status: newStatus as never, _reason: reason || undefined });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Status atualizado"); invalidate(); setNewStatus(""); setReason(""); },
@@ -180,7 +180,7 @@ function ChurnCard({ storeId, current, onDone }: { storeId: string; current: Det
   const [open, setOpen] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_register_churn", { _store_id: storeId, _reason: reason as never, _note: note || null });
+      const { error } = await supabase.rpc("admin_register_churn", { _store_id: storeId, _reason: reason as never, _note: note || undefined });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Motivo registrado"); onDone(); setOpen(false); setReason(""); setNote(""); },
