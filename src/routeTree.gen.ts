@@ -17,6 +17,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as LojaSlugRouteImport } from './routes/loja.$slug'
 import { Route as AdminTrialRouteImport } from './routes/admin/trial'
 import { Route as AdminLojistasRouteImport } from './routes/admin/lojistas'
+import { Route as AdminEquipeRouteImport } from './routes/admin/equipe'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminCampanhasRouteImport } from './routes/admin/campanhas'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
@@ -62,6 +63,11 @@ const AdminTrialRoute = AdminTrialRouteImport.update({
 const AdminLojistasRoute = AdminLojistasRouteImport.update({
   id: '/lojistas',
   path: '/lojistas',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminEquipeRoute = AdminEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/lojistas': typeof AdminLojistasRouteWithChildren
   '/admin/trial': typeof AdminTrialRoute
   '/loja/$slug': typeof LojaSlugRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
+    | '/admin/equipe'
     | '/admin/lojistas'
     | '/admin/trial'
     | '/loja/$slug'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
+    | '/admin/equipe'
     | '/admin/lojistas'
     | '/admin/trial'
     | '/loja/$slug'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
+    | '/admin/equipe'
     | '/admin/lojistas'
     | '/admin/trial'
     | '/loja/$slug'
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/lojistas'
       fullPath: '/admin/lojistas'
       preLoaderRoute: typeof AdminLojistasRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/equipe': {
+      id: '/admin/equipe'
+      path: '/equipe'
+      fullPath: '/admin/equipe'
+      preLoaderRoute: typeof AdminEquipeRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/dashboard': {
@@ -350,6 +369,7 @@ const AdminLojistasRouteWithChildren = AdminLojistasRoute._addFileChildren(
 interface AdminRouteRouteChildren {
   AdminCampanhasRoute: typeof AdminCampanhasRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminEquipeRoute: typeof AdminEquipeRoute
   AdminLojistasRoute: typeof AdminLojistasRouteWithChildren
   AdminTrialRoute: typeof AdminTrialRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -358,6 +378,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCampanhasRoute: AdminCampanhasRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminEquipeRoute: AdminEquipeRoute,
   AdminLojistasRoute: AdminLojistasRouteWithChildren,
   AdminTrialRoute: AdminTrialRoute,
   AdminIndexRoute: AdminIndexRoute,
