@@ -29,9 +29,9 @@ function LojistasPage() {
     queryKey: ["admin", "stores", status, health, search],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_list_stores", {
-        _status: status || null,
-        _health: health || null,
-        _search: search || null,
+        _status: status || undefined,
+        _health: health || undefined,
+        _search: search || undefined,
         _limit: 100,
         _offset: 0,
       });
