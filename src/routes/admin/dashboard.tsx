@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { formatBRL } from "@/lib/format";
 import { Users, TrendingUp, AlertTriangle, Clock, CheckCircle2, XCircle } from "lucide-react";
 
-export const Route = createFileRoute("/_admin/dashboard")({
+export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Painel admin — ProntoPede" }] }),
   component: AdminDashboard,
 });

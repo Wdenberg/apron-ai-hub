@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatBRL, whatsappLink } from "@/lib/format";
 import { MessageCircle } from "lucide-react";
 
-export const Route = createFileRoute("/_admin/lojistas")({
+export const Route = createFileRoute("/admin/lojistas")({
   head: () => ({ meta: [{ title: "Lojistas — Admin ProntoPede" }] }),
   component: LojistasPage,
 });
