@@ -18,6 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsAdmin } from "@/hooks/use-is-admin";
+import { ShieldCheck } from "lucide-react";
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
+  const isAdmin = useIsAdmin();
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -99,6 +102,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="hidden sm:inline text-xs px-2 py-1 rounded-full bg-warning/20 text-warning-foreground font-medium">
               Teste grátis
             </span>
+          )}
+          {isAdmin.data && (
+            <a href="/admin/dashboard" className="text-xs px-2 py-1 rounded-full bg-primary/15 text-primary font-medium inline-flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" /> Admin
+            </a>
           )}
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
