@@ -14,6 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          payload: Json
+          store_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          store_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          payload?: Json
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+        }
+        Relationships: []
+      }
+      admin_notes: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          note: string
+          store_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          note: string
+          store_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_notes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      churn_reasons: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string | null
+          reason: Database["public"]["Enums"]["churn_reason"]
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          note?: string | null
+          reason: Database["public"]["Enums"]["churn_reason"]
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string | null
+          reason?: Database["public"]["Enums"]["churn_reason"]
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "churn_reasons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "churn_reasons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communications: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          message_template: string
+          recipient_count: number
+          segment: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          message_template: string
+          recipient_count?: number
+          segment: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          message_template?: string
+          recipient_count?: number
+          segment?: string
+        }
+        Relationships: []
+      }
+      communications_recipients: {
+        Row: {
+          communication_id: string
+          id: string
+          opened_at: string | null
+          rendered_message: string
+          store_id: string
+        }
+        Insert: {
+          communication_id: string
+          id?: string
+          opened_at?: string | null
+          rendered_message: string
+          store_id: string
+        }
+        Update: {
+          communication_id?: string
+          id?: string
+          opened_at?: string | null
+          rendered_message?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communications_recipients_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_recipients_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_recipients_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -105,6 +325,7 @@ export type Database = {
         Row: {
           created_at: string
           customer_name: string
+          customer_user_id: string | null
           customer_whatsapp: string | null
           id: string
           notes: string | null
@@ -119,6 +340,7 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_name: string
+          customer_user_id?: string | null
           customer_whatsapp?: string | null
           id?: string
           notes?: string | null
@@ -133,6 +355,7 @@ export type Database = {
         Update: {
           created_at?: string
           customer_name?: string
+          customer_user_id?: string | null
           customer_whatsapp?: string | null
           id?: string
           notes?: string | null
@@ -154,6 +377,51 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          status: string
+          store_id: string
+          stripe_invoice_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status: string
+          store_id: string
+          stripe_invoice_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          store_id?: string
+          stripe_invoice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores_public"
@@ -252,6 +520,7 @@ export type Database = {
           hours: Json
           id: string
           is_open: boolean
+          last_login_at: string | null
           logo_url: string | null
           name: string
           owner_id: string
@@ -273,6 +542,7 @@ export type Database = {
           hours?: Json
           id?: string
           is_open?: boolean
+          last_login_at?: string | null
           logo_url?: string | null
           name: string
           owner_id: string
@@ -294,6 +564,7 @@ export type Database = {
           hours?: Json
           id?: string
           is_open?: boolean
+          last_login_at?: string | null
           logo_url?: string | null
           name?: string
           owner_id?: string
@@ -375,19 +646,132 @@ export type Database = {
       }
     }
     Functions: {
-      create_public_order: {
-        Args: {
-          _customer_name: string
-          _customer_whatsapp: string
-          _items: Json
-          _notes: string
-          _store_id: string
-        }
+      admin_add_note: {
+        Args: { _note: string; _store_id: string }
+        Returns: undefined
+      }
+      admin_create_campaign: {
+        Args: { _message_template: string; _recipients: Json; _segment: string }
+        Returns: string
+      }
+      admin_extend_trial: {
+        Args: { _days: number; _store_id: string }
+        Returns: undefined
+      }
+      admin_invite: { Args: { _email: string }; Returns: Json }
+      admin_list_campaigns: {
+        Args: never
         Returns: {
+          created_at: string
           id: string
-          order_number: number
+          message_template: string
+          opened_count: number
+          recipient_count: number
+          segment: string
         }[]
       }
+      admin_list_stores: {
+        Args: {
+          _health?: string
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _status?: string
+        }
+        Returns: {
+          created_at: string
+          health: string
+          id: string
+          last_login_at: string
+          last_order_at: string
+          name: string
+          owner_email: string
+          slug: string
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_days_left: number
+          whatsapp: string
+        }[]
+      }
+      admin_list_team: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          invited: boolean
+          user_id: string
+        }[]
+      }
+      admin_mark_recipient_opened: {
+        Args: { _recipient_id: string }
+        Returns: undefined
+      }
+      admin_overview: { Args: never; Returns: Json }
+      admin_recovery_list: {
+        Args: never
+        Returns: {
+          days_since_trial: number
+          name: string
+          owner_email: string
+          reason: Database["public"]["Enums"]["churn_reason"]
+          store_id: string
+          whatsapp: string
+        }[]
+      }
+      admin_register_churn: {
+        Args: {
+          _note?: string
+          _reason: Database["public"]["Enums"]["churn_reason"]
+          _store_id: string
+        }
+        Returns: undefined
+      }
+      admin_segment_stores: {
+        Args: { _segment: string }
+        Returns: {
+          name: string
+          store_id: string
+          trial_days_left: number
+          whatsapp: string
+        }[]
+      }
+      admin_set_subscription_status: {
+        Args: {
+          _reason?: string
+          _status: Database["public"]["Enums"]["subscription_status"]
+          _store_id: string
+        }
+        Returns: undefined
+      }
+      admin_store_detail: { Args: { _store_id: string }; Returns: Json }
+      admin_trial_metrics: { Args: { _window_days?: number }; Returns: Json }
+      create_public_order:
+        | {
+            Args: {
+              _customer_name: string
+              _customer_whatsapp: string
+              _items: Json
+              _notes: string
+              _store_id: string
+            }
+            Returns: {
+              id: string
+              order_number: number
+            }[]
+          }
+        | {
+            Args: {
+              _customer_name: string
+              _customer_user_id?: string
+              _customer_whatsapp: string
+              _items: Json
+              _notes: string
+              _store_id: string
+            }
+            Returns: {
+              id: string
+              order_number: number
+            }[]
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -395,10 +779,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_orders: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          order_number: number
+          status: Database["public"]["Enums"]["order_status"]
+          store_id: string
+          store_name: string
+          store_slug: string
+          total: number
+        }[]
+      }
       next_order_number: { Args: { _store: string }; Returns: number }
+      store_health: { Args: { _store_id: string }; Returns: string }
     }
     Enums: {
-      app_role: "owner" | "admin"
+      app_role: "owner" | "admin" | "user"
+      churn_reason:
+        | "preco"
+        | "complexidade"
+        | "mudou_ramo"
+        | "nao_deu_certo"
+        | "sem_tempo"
+        | "outro"
       order_status: "recebido" | "preparo" | "pronto" | "entregue" | "cancelado"
       order_type: "reserva" | "presencial"
       payment_method: "pix" | "cartao" | "dinheiro" | "nao_definido"
@@ -535,7 +940,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin"],
+      app_role: ["owner", "admin", "user"],
+      churn_reason: [
+        "preco",
+        "complexidade",
+        "mudou_ramo",
+        "nao_deu_certo",
+        "sem_tempo",
+        "outro",
+      ],
       order_status: ["recebido", "preparo", "pronto", "entregue", "cancelado"],
       order_type: ["reserva", "presencial"],
       payment_method: ["pix", "cartao", "dinheiro", "nao_definido"],
