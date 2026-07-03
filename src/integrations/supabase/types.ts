@@ -62,21 +62,21 @@ export type Database = {
           created_at: string
           email: string
           id: string
-          invited_by: string
+          invited_by: string | null
         }
         Insert: {
           accepted_at?: string | null
           created_at?: string
           email: string
           id?: string
-          invited_by: string
+          invited_by?: string | null
         }
         Update: {
           accepted_at?: string | null
           created_at?: string
           email?: string
           id?: string
-          invited_by?: string
+          invited_by?: string | null
         }
         Relationships: []
       }
