@@ -18,7 +18,7 @@ describe("normalizeBRPhone", () => {
     expect(normalizeBRPhone("21999990000")).toBe("5521999990000");
   });
   it("strips letters, spaces and punctuation", () => {
-    expect(normalizeBRPhone("tel: (21) 9.9999-0000 ramal 1")).toBe("552199999000001");
+    expect(normalizeBRPhone("tel: (21) 9.9999-0000 ramal 1")).toBe("55219999900001");
   });
 });
 
