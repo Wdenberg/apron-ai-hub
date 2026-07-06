@@ -38,20 +38,21 @@ function SettingsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: store, isLoading } = useQuery({
-  const { data: productsCount } = useQuery({
-    queryKey: ["products-count", store?.id],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", store!.id);
-      return count ?? 0;
-    },
-  });
     queryKey: ["my-store-full"],
     queryFn: async () => {
       const { data } = await supabase.from("stores")
         .select("id, name, slug, whatsapp, description, address, city, state, is_open, logo_url, cover_url")
         .maybeSingle();
       return data as Store | null;
+    },
+  });
+
+  const { data: productsCount } = useQuery({
+    queryKey: ["products-count", store?.id],
+    enabled: !!store?.id,
+    queryFn: async () => {
+      const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", store!.id);
+      return count ?? 0;
     },
   });
 
