@@ -747,34 +747,20 @@ export type Database = {
       }
       admin_store_detail: { Args: { _store_id: string }; Returns: Json }
       admin_trial_metrics: { Args: { _window_days?: number }; Returns: Json }
-      create_public_order:
-        | {
-            Args: {
-              _customer_name: string
-              _customer_whatsapp: string
-              _items: Json
-              _notes: string
-              _store_id: string
-            }
-            Returns: {
-              id: string
-              order_number: number
-            }[]
-          }
-        | {
-            Args: {
-              _customer_name: string
-              _customer_user_id?: string
-              _customer_whatsapp: string
-              _items: Json
-              _notes: string
-              _store_id: string
-            }
-            Returns: {
-              id: string
-              order_number: number
-            }[]
-          }
+      create_public_order: {
+        Args: {
+          _customer_name: string
+          _customer_user_id?: string
+          _customer_whatsapp: string
+          _items: Json
+          _notes: string
+          _store_id: string
+        }
+        Returns: {
+          id: string
+          order_number: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
