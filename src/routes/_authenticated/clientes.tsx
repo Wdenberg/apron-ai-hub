@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +7,23 @@ import { formatBRL } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, MessageCircle, Search, ClipboardList } from "lucide-react";
+import { DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Users, MessageCircle, Search, ClipboardList, Pencil, Trash2 } from "lucide-react";
 import { ORDER_STATUS_LABELS } from "@/lib/format";
+import { normalizeBRPhone } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({ meta: [{ title: "Clientes — ProntoPede" }] }),
@@ -45,6 +59,9 @@ function formatPhone(digits: string): string {
 function CustomersPage() {
   const [query, setQuery] = useState("");
   const [openCustomer, setOpenCustomer] = useState<Customer | null>(null);
+  const [editing, setEditing] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState<Customer | null>(null);
+  const qc = useQueryClient();
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -61,6 +78,37 @@ function CustomersPage() {
       if (error) throw error;
       return (data ?? []) as Customer[];
     },
+  });
+
+  const saveCustomer = useMutation({
+    mutationFn: async (payload: { id: string; name: string; whatsapp: string }) => {
+      const wa = normalizeBRPhone(payload.whatsapp).replace(/^55/, "");
+      if (wa.length < 10) throw new Error("WhatsApp inválido");
+      const { error } = await supabase
+        .from("customers")
+        .update({ name: payload.name.trim(), whatsapp: wa })
+        .eq("id", payload.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Cliente atualizado");
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteCustomer = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("customers").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Cliente excluído. Os pedidos anteriores permanecem no histórico.");
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      setDeleting(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const filtered = customers.filter((c) => {
@@ -154,6 +202,23 @@ function CustomersPage() {
                       <MessageCircle className="h-4 w-4" />
                     </a>
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditing(c)}
+                    title="Editar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleting(c)}
+                    title="Excluir"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -165,7 +230,100 @@ function CustomersPage() {
         customer={openCustomer}
         onClose={() => setOpenCustomer(null)}
       />
+
+      <EditCustomerDialog
+        customer={editing}
+        onClose={() => setEditing(null)}
+        onSave={(payload) => saveCustomer.mutate(payload)}
+        pending={saveCustomer.isPending}
+      />
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {deleting?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting && deleting.total_orders > 0 ? (
+                <>
+                  Este cliente possui <strong>{deleting.total_orders} pedido(s)</strong>. O cadastro será removido, mas o histórico de pedidos permanece salvo e continuará visível em /pedidos e nos relatórios.
+                </>
+              ) : (
+                "O cadastro será removido definitivamente."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleting && deleteCustomer.mutate(deleting.id)}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
+  );
+}
+
+function EditCustomerDialog({
+  customer,
+  onClose,
+  onSave,
+  pending,
+}: {
+  customer: Customer | null;
+  onClose: () => void;
+  onSave: (p: { id: string; name: string; whatsapp: string }) => void;
+  pending: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  if (customer && !name && !whatsapp) {
+    setName(customer.name);
+    setWhatsapp(customer.whatsapp);
+  }
+  function close() {
+    setName("");
+    setWhatsapp("");
+    onClose();
+  }
+  return (
+    <Dialog open={!!customer} onOpenChange={(o) => !o && close()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Editar cliente</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="name">Nome</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+          </div>
+          <div>
+            <Label htmlFor="wa">WhatsApp</Label>
+            <Input
+              id="wa"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="(21) 99999-0000"
+              maxLength={20}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={close}>Voltar</Button>
+          <Button
+            disabled={pending || !name.trim() || !whatsapp.trim()}
+            onClick={() =>
+              customer && onSave({ id: customer.id, name, whatsapp })
+            }
+          >
+            {pending ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

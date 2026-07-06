@@ -20,9 +20,10 @@ export function whatsappLink(phone: string, message: string): string {
 }
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
-  recebido: "Recebido",
+  pendente: "Pendente",
   preparo: "Em preparo",
-  pronto: "Pronto p/ retirada",
+  pronto: "Pronto",
+  saiu_entrega: "Saiu para entrega",
   entregue: "Entregue",
   cancelado: "Cancelado",
 };
@@ -32,4 +33,10 @@ export const PAYMENT_LABELS: Record<string, string> = {
   cartao: "Cartão",
   dinheiro: "Dinheiro",
   nao_definido: "A definir",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pendente: "Pendente",
+  pago: "Pago",
+  nao_pago: "Não pago",
 };

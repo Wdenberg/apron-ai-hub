@@ -331,6 +331,7 @@ export type Database = {
           notes: string | null
           order_number: number | null
           payment: Database["public"]["Enums"]["payment_method"]
+          payment_status: Database["public"]["Enums"]["payment_status"]
           status: Database["public"]["Enums"]["order_status"]
           store_id: string
           total: number
@@ -346,6 +347,7 @@ export type Database = {
           notes?: string | null
           order_number?: number | null
           payment?: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["order_status"]
           store_id: string
           total?: number
@@ -361,6 +363,7 @@ export type Database = {
           notes?: string | null
           order_number?: number | null
           payment?: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           status?: Database["public"]["Enums"]["order_status"]
           store_id?: string
           total?: number
@@ -829,9 +832,16 @@ export type Database = {
         | "nao_deu_certo"
         | "sem_tempo"
         | "outro"
-      order_status: "recebido" | "preparo" | "pronto" | "entregue" | "cancelado"
+      order_status:
+        | "pendente"
+        | "preparo"
+        | "pronto"
+        | "saiu_entrega"
+        | "entregue"
+        | "cancelado"
       order_type: "reserva" | "presencial"
       payment_method: "pix" | "cartao" | "dinheiro" | "nao_definido"
+      payment_status: "pendente" | "pago" | "nao_pago"
       subscription_status:
         | "trial"
         | "active"
@@ -974,9 +984,17 @@ export const Constants = {
         "sem_tempo",
         "outro",
       ],
-      order_status: ["recebido", "preparo", "pronto", "entregue", "cancelado"],
+      order_status: [
+        "pendente",
+        "preparo",
+        "pronto",
+        "saiu_entrega",
+        "entregue",
+        "cancelado",
+      ],
       order_type: ["reserva", "presencial"],
       payment_method: ["pix", "cartao", "dinheiro", "nao_definido"],
+      payment_status: ["pendente", "pago", "nao_pago"],
       subscription_status: [
         "trial",
         "active",
