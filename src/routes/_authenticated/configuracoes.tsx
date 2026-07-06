@@ -207,3 +207,102 @@ function UploadButton({ onFile, pending }: { onFile: (f: File) => void; pending:
     </label>
   );
 }
+
+const createSchema = z.object({
+  name: z.string().trim().min(2, "Informe o nome da loja").max(80),
+  slug: z.string().trim().regex(/^[a-z0-9-]{3,40}$/i, "Use 3-40 letras, números ou hífen"),
+  whatsapp: z.string().trim().min(10, "WhatsApp inválido").max(20),
+  city: z.string().max(60).optional().or(z.literal("")),
+  state: z.string().max(2).optional().or(z.literal("")),
+  description: z.string().max(300).optional().or(z.literal("")),
+});
+
+function CreateStoreForm({ onCreated }: { onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if (!slugTouched) setSlug(slugify(name)); }, [name, slugTouched]);
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const parsed = createSchema.safeParse({
+      name: fd.get("name"),
+      slug: fd.get("slug"),
+      whatsapp: fd.get("whatsapp"),
+      city: fd.get("city"),
+      state: fd.get("state"),
+      description: fd.get("description"),
+    });
+    if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
+    setLoading(true);
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) { setLoading(false); return; }
+    const { error } = await supabase.from("stores").insert({
+      owner_id: user.user.id,
+      name: parsed.data.name,
+      slug: parsed.data.slug.toLowerCase(),
+      whatsapp: parsed.data.whatsapp,
+      city: parsed.data.city || null,
+      state: parsed.data.state || null,
+      description: parsed.data.description || null,
+    });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Loja criada!");
+    onCreated();
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full mb-3">
+          <Rocket className="h-3 w-3" /> Comece por aqui
+        </div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Crie sua loja pública</h1>
+        <p className="text-muted-foreground">Você recebe um link exclusivo em prontopede.com.br/loja/…</p>
+      </div>
+      <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-6 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="name">Nome da loja</Label>
+          <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} placeholder="Ex.: Marmitas da Dona Zefa" />
+        </div>
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="slug">Link da loja</Label>
+          <div className="flex items-center rounded-md border border-input bg-background overflow-hidden">
+            <span className="px-3 text-sm text-muted-foreground bg-muted h-10 flex items-center border-r border-input">prontopede.com.br/loja/</span>
+            <input id="slug" name="slug" value={slug}
+              onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSlugTouched(true); }}
+              className="flex-1 h-10 px-3 bg-transparent outline-none text-sm" required pattern="[a-z0-9-]{3,40}" maxLength={40} />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="whatsapp">WhatsApp</Label>
+          <Input id="whatsapp" name="whatsapp" placeholder="(21) 99999-0000" required maxLength={20} />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2 space-y-1.5">
+            <Label htmlFor="city">Cidade</Label>
+            <Input id="city" name="city" maxLength={60} placeholder="Rio de Janeiro" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="state">UF</Label>
+            <Input id="state" name="state" maxLength={2} placeholder="RJ" />
+          </div>
+        </div>
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="description">Sobre a sua loja</Label>
+          <Textarea id="description" name="description" maxLength={300} rows={3} placeholder="Uma frase curta sobre o que você vende." />
+        </div>
+        <div className="sm:col-span-2 flex justify-end pt-2">
+          <Button type="submit" size="lg" disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Criar minha loja
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
