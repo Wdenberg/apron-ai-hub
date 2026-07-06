@@ -47,13 +47,6 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "admin_actions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       admin_invites: {
@@ -110,13 +103,6 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "admin_notes_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       churn_reasons: {
@@ -150,13 +136,6 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "churn_reasons_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -225,13 +204,6 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "communications_recipients_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       customers: {
@@ -268,13 +240,6 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -378,13 +343,6 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "orders_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       payments: {
@@ -421,13 +379,6 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -478,13 +429,6 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores_public"
             referencedColumns: ["id"]
           },
         ]
@@ -605,51 +549,7 @@ export type Database = {
       }
     }
     Views: {
-      stores_public: {
-        Row: {
-          address: string | null
-          city: string | null
-          cover_url: string | null
-          description: string | null
-          hours: Json | null
-          id: string | null
-          is_open: boolean | null
-          logo_url: string | null
-          name: string | null
-          slug: string | null
-          state: string | null
-          whatsapp: string | null
-        }
-        Insert: {
-          address?: string | null
-          city?: string | null
-          cover_url?: string | null
-          description?: string | null
-          hours?: Json | null
-          id?: string | null
-          is_open?: boolean | null
-          logo_url?: string | null
-          name?: string | null
-          slug?: string | null
-          state?: string | null
-          whatsapp?: string | null
-        }
-        Update: {
-          address?: string | null
-          city?: string | null
-          cover_url?: string | null
-          description?: string | null
-          hours?: Json | null
-          id?: string | null
-          is_open?: boolean | null
-          logo_url?: string | null
-          name?: string | null
-          slug?: string | null
-          state?: string | null
-          whatsapp?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       admin_add_note: {
@@ -762,6 +662,23 @@ export type Database = {
         Returns: {
           id: string
           order_number: number
+        }[]
+      }
+      get_public_store: {
+        Args: { _slug: string }
+        Returns: {
+          address: string
+          city: string
+          cover_url: string
+          description: string
+          hours: Json
+          id: string
+          is_open: boolean
+          logo_url: string
+          name: string
+          slug: string
+          state: string
+          whatsapp: string
         }[]
       }
       has_role: {
