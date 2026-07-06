@@ -54,7 +54,7 @@ function LojistasPage() {
       const { error } = await supabase.rpc("admin_set_subscription_status", {
         _store_id: id,
         _status: next,
-        _reason: null,
+        _reason: undefined,
       });
       if (error) throw error;
     },
