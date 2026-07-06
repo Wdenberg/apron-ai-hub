@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Upload, Store as StoreIcon } from "lucide-react";
+import { Loader2, Upload, Store as StoreIcon, Rocket } from "lucide-react";
+import { slugify } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações — ProntoPede" }] }),
@@ -107,7 +108,7 @@ function SettingsPage() {
   }
 
   if (isLoading) return <AppShell><div className="text-muted-foreground">Carregando...</div></AppShell>;
-  if (!store) return <AppShell><div>Nenhuma loja encontrada.</div></AppShell>;
+  if (!store) return <AppShell><CreateStoreForm onCreated={() => qc.invalidateQueries({ queryKey: ["my-store-full"] })} /></AppShell>;
 
   return (
     <AppShell>
