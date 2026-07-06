@@ -238,7 +238,7 @@ function PublicStore() {
             </div>
             <Button type="submit" size="lg" className="w-full" disabled={submitOrder.isPending}>
               <MessageCircle className="h-4 w-4 mr-2" />
-              {submitOrder.isPending ? "Enviando..." : "Enviar pedido pelo WhatsApp"}
+              {submitOrder.isPending ? "Enviando..." : "Enviar Pedido"}
             </Button>
           </form>
         </DialogContent>
