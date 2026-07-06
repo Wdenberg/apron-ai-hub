@@ -104,18 +104,18 @@ function PublicStore() {
       } as never);
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return row as { id: string; order_number: number };
+      return { ...(row as { id: string; order_number: number }), payload };
     },
     onSuccess: (order) => {
       openWhatsAppOrder({
         storeName: store.name,
         storePhone: store.whatsapp,
         orderNumber: order.order_number,
-        customerName: order.customer_name ?? "",
-        customerPhone: order.customer_whatsapp ?? "",
+        customerName: order.payload.name,
+        customerPhone: order.payload.whatsapp,
         items: items.map((i) => ({ name: i.name, quantity: i.qty, unit_price: i.price })),
         total,
-        notes: order.notes ?? null,
+        notes: order.payload.notes ?? null,
       });
       setCart({}); setCheckoutOpen(false); setLastOrder({ number: order.order_number });
       toast.success(`Pedido #${order.order_number} enviado!`);
