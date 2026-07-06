@@ -13,6 +13,7 @@ import {
   X,
   CreditCard,
   Receipt,
+  UserCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const NAV = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
   { to: "/assinatura", label: "Assinatura", icon: CreditCard },
+  { to: "/perfil", label: "Meu perfil", icon: UserCircle },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

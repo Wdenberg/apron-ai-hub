@@ -22,6 +22,7 @@ import { Route as AdminEquipeRouteImport } from './routes/admin/equipe'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminCampanhasRouteImport } from './routes/admin/campanhas'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -93,6 +94,11 @@ const AuthenticatedProdutosRoute = AuthenticatedProdutosRouteImport.update({
   path: '/produtos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPedidosRoute = AuthenticatedPedidosRouteImport.update({
   id: '/pedidos',
   path: '/pedidos',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pedidos': typeof AuthenticatedPedidosRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/onboarding'
     | '/pedidos'
+    | '/perfil'
     | '/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/onboarding'
     | '/pedidos'
+    | '/perfil'
     | '/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
     | '/_authenticated/pedidos'
+    | '/_authenticated/perfil'
     | '/_authenticated/produtos'
     | '/admin/campanhas'
     | '/admin/dashboard'
@@ -351,6 +363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProdutosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pedidos': {
       id: '/_authenticated/pedidos'
       path: '/pedidos'
@@ -402,6 +421,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedProdutosRoute: typeof AuthenticatedProdutosRoute
 }
 
@@ -411,6 +431,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedProdutosRoute: AuthenticatedProdutosRoute,
 }
 
