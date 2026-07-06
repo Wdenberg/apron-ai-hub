@@ -768,6 +768,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_customer_orders: {
+        Args: { _customer_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          notes: string
+          order_number: number
+          status: Database["public"]["Enums"]["order_status"]
+          total: number
+        }[]
+      }
       list_public_products: {
         Args: { _slug: string }
         Returns: {
@@ -779,6 +790,18 @@ export type Database = {
           price: number
           stock: number
           store_id: string
+        }[]
+      }
+      list_store_customers: {
+        Args: { _store_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          last_order_at: string
+          name: string
+          total_orders: number
+          total_spent: number
+          whatsapp: string
         }[]
       }
       my_orders: {
