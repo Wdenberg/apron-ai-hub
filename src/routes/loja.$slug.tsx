@@ -12,6 +12,8 @@ import { formatBRL, whatsappLink } from "@/lib/format";
 import { toast } from "sonner";
 import { ShoppingBag, MapPin, MessageCircle, Plus, Minus, X } from "lucide-react";
 import { z } from "zod";
+import { customerCheckoutSchema } from "@/lib/customer-validation";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/loja/$slug")({
   head: () => ({ meta: [{ title: "Loja — ProntoPede" }] }),
@@ -47,17 +49,16 @@ export const Route = createFileRoute("/loja/$slug")({
 
 type CartItem = { id: string; name: string; price: number; qty: number; stock: number };
 
-const checkoutSchema = z.object({
-  name: z.string().trim().min(2).max(80),
-  whatsapp: z.string().trim().min(10).max(20),
-  notes: z.string().max(300).optional().or(z.literal("")),
-});
+const checkoutSchema = customerCheckoutSchema;
 
 function PublicStore() {
   const { store, products } = Route.useLoaderData();
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [lastOrder, setLastOrder] = useState<{ number: number } | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user)); }, []);
   useEffect(() => {
     resolveStoreAssetUrl(store.cover_url).then(setCoverUrl);
   }, [store.cover_url]);
@@ -108,7 +109,7 @@ function PublicStore() {
       const lines = items.map((i) => `• ${i.qty}x ${i.name} — ${formatBRL(i.price * i.qty)}`).join("\n");
       const msg = `Olá! Fiz o pedido #${order.order_number} na sua loja ${store.name}.\n\n${lines}\n\nTotal: ${formatBRL(total)}`;
       window.open(whatsappLink(store.whatsapp, msg), "_blank");
-      setCart({}); setCheckoutOpen(false);
+      setCart({}); setCheckoutOpen(false); setLastOrder({ number: order.order_number });
       toast.success(`Pedido #${order.order_number} enviado!`);
     },
     onError: (e: Error) => toast.error(e.message),
