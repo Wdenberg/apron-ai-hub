@@ -19,15 +19,14 @@ import { Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/loja/$slug")({
   head: () => ({ meta: [{ title: "Loja — ProntoPede" }] }),
   loader: async ({ params }) => {
-    const { data: store } = await supabase
-      .from("stores_public" as never)
-      .select("id, name, slug, description, whatsapp, address, city, state, is_open, logo_url, cover_url")
-      .eq("slug", params.slug)
-      .maybeSingle<{
-        id: string; name: string; slug: string; description: string | null;
-        whatsapp: string; address: string | null; city: string | null; state: string | null;
-        is_open: boolean; logo_url: string | null; cover_url: string | null;
-      }>();
+    const { data: stores } = await supabase.rpc("get_public_store" as never, {
+      _slug: params.slug,
+    } as never);
+    const store = (stores as Array<{
+      id: string; name: string; slug: string; description: string | null;
+      whatsapp: string; address: string | null; city: string | null; state: string | null;
+      is_open: boolean; logo_url: string | null; cover_url: string | null;
+    }> | null)?.[0];
     if (!store) throw notFound();
     const { data: products } = await supabase.rpc("list_public_products" as never, {
       _slug: params.slug,
