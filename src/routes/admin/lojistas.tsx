@@ -11,6 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatBRL, whatsappLink } from "@/lib/format";
 import { MessageCircle, UserPlus, Ban, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { z } from "zod";
 import { adminCreateLojista } from "@/lib/admin-lojista.functions";
@@ -25,6 +33,16 @@ type Row = {
   subscription_status: string; trial_days_left: number; last_login_at: string | null;
   last_order_at: string | null; health: "green" | "yellow" | "red"; created_at: string;
   whatsapp: string;
+  plan: "mensal" | "trimestral" | "semestral" | "anual" | null;
+  subscription_ends_at: string | null;
+};
+
+type Plan = "mensal" | "trimestral" | "semestral" | "anual";
+const PLAN_LABEL: Record<Plan, string> = {
+  mensal: "Mensal — R$ 39,90",
+  trimestral: "Trimestral — R$ 107,73",
+  semestral: "Semestral — R$ 203,49",
+  anual: "Anual — R$ 383,04",
 };
 
 function LojistasPage() {
@@ -61,6 +79,21 @@ function LojistasPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "stores"] });
       toast.success("Status atualizado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const activatePlanMut = useMutation({
+    mutationFn: async ({ id, plan }: { id: string; plan: Plan }) => {
+      const { error } = await supabase.rpc("admin_activate_with_plan", {
+        _store_id: id,
+        _plan: plan,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "stores"] });
+      toast.success("Assinatura ativada");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -128,7 +161,8 @@ function LojistasPage() {
                 <th className="text-left px-4 py-3">Lojista</th>
                 <th className="text-left px-4 py-3">E-mail</th>
                 <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Trial</th>
+                <th className="text-left px-4 py-3">Plano</th>
+                <th className="text-left px-4 py-3">Trial / Venc.</th>
                 <th className="text-left px-4 py-3">Saúde</th>
                 <th className="text-left px-4 py-3">Último acesso</th>
                 <th className="text-left px-4 py-3">Último pedido</th>
@@ -137,10 +171,10 @@ function LojistasPage() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Carregando...</td></tr>
               )}
               {!isLoading && !data?.length && (
-                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum lojista encontrado.</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum lojista encontrado.</td></tr>
               )}
               {data?.map((s) => (
                 <tr key={s.id} className="border-t border-border hover:bg-muted/30">
@@ -152,19 +186,42 @@ function LojistasPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{s.owner_email ?? "—"}</td>
                   <td className="px-4 py-3"><StatusBadge value={s.subscription_status} /></td>
+                  <td className="px-4 py-3 text-xs">{planLabel(s.plan)}</td>
                   <td className="px-4 py-3 text-xs">{trialLabel(s)}</td>
                   <td className="px-4 py-3"><HealthDot value={s.health} /></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(s.last_login_at)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(s.last_order_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            disabled={activatePlanMut.isPending}
+                            className="inline-flex items-center gap-1 text-success hover:underline text-xs disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="h-3 w-3" /> Ativar plano
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ativar conforme pagamento</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {(Object.keys(PLAN_LABEL) as Plan[]).map((p) => (
+                            <DropdownMenuItem
+                              key={p}
+                              onSelect={() => activatePlanMut.mutate({ id: s.id, plan: p })}
+                            >
+                              {PLAN_LABEL[p]}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       {s.subscription_status === "blocked" ? (
                         <button
                           onClick={() => setStatusMut.mutate({ id: s.id, next: "active" })}
                           disabled={setStatusMut.isPending}
                           className="inline-flex items-center gap-1 text-success hover:underline text-xs"
                         >
-                          <CheckCircle2 className="h-3 w-3" /> Ativar
+                          <CheckCircle2 className="h-3 w-3" /> Desbloquear
                         </button>
                       ) : (
                         <button
@@ -237,11 +294,27 @@ function trialLabel(s: Row) {
   if (s.subscription_status === "trial") {
     return s.trial_days_left > 0 ? `${s.trial_days_left}d restantes` : "expirado";
   }
-  if (s.subscription_status === "active") return "assinatura ativa";
+  if (s.subscription_status === "active") {
+    if (s.subscription_ends_at) {
+      return `vence ${new Date(s.subscription_ends_at).toLocaleDateString("pt-BR")}`;
+    }
+    return "assinatura ativa";
+  }
   if (s.subscription_status === "past_due") return "pagamento pendente";
   if (s.subscription_status === "blocked") return "bloqueado";
   if (s.subscription_status === "canceled") return "cancelado";
   return "—";
+}
+
+function planLabel(plan: Row["plan"]) {
+  if (!plan) return <span className="text-muted-foreground">—</span>;
+  const map: Record<Plan, string> = {
+    mensal: "Mensal",
+    trimestral: "Trimestral",
+    semestral: "Semestral",
+    anual: "Anual",
+  };
+  return <span className="font-medium">{map[plan]}</span>;
 }
 
 function fmtDate(iso: string | null) {

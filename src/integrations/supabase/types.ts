@@ -495,10 +495,12 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string
+          plan: Database["public"]["Enums"]["subscription_plan"] | null
           slug: string
           state: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          subscription_ends_at: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at: string
           updated_at: string
@@ -517,10 +519,12 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id: string
+          plan?: Database["public"]["Enums"]["subscription_plan"] | null
           slug: string
           state?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_ends_at?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string
           updated_at?: string
@@ -539,10 +543,12 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"] | null
           slug?: string
           state?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          subscription_ends_at?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           trial_ends_at?: string
           updated_at?: string
@@ -573,6 +579,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_activate_with_plan: {
+        Args: {
+          _plan: Database["public"]["Enums"]["subscription_plan"]
+          _store_id: string
+        }
+        Returns: undefined
+      }
       admin_add_note: {
         Args: { _note: string; _store_id: string }
         Returns: undefined
@@ -613,7 +626,9 @@ export type Database = {
           last_order_at: string
           name: string
           owner_email: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
           slug: string
+          subscription_ends_at: string
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           trial_days_left: number
           whatsapp: string
@@ -784,6 +799,7 @@ export type Database = {
       order_type: "reserva" | "presencial"
       payment_method: "pix" | "cartao" | "dinheiro" | "nao_definido"
       payment_status: "pendente" | "pago" | "nao_pago"
+      subscription_plan: "mensal" | "trimestral" | "semestral" | "anual"
       subscription_status:
         | "trial"
         | "active"
@@ -937,6 +953,7 @@ export const Constants = {
       order_type: ["reserva", "presencial"],
       payment_method: ["pix", "cartao", "dinheiro", "nao_definido"],
       payment_status: ["pendente", "pago", "nao_pago"],
+      subscription_plan: ["mensal", "trimestral", "semestral", "anual"],
       subscription_status: [
         "trial",
         "active",
