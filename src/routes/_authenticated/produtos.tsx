@@ -80,8 +80,11 @@ function ProductsPage() {
   async function handlePhoto(file: File) {
     if (!store?.id) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Imagem maior que 5MB"); return; }
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!ALLOWED.includes(file.type)) { toast.error("Somente imagens (JPEG, PNG, WEBP, GIF) são permitidas"); return; }
     setUploadingPhoto(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const extByMime: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+    const ext = extByMime[file.type];
     const path = `${store.id}/produtos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await supabase.storage.from("store-assets").upload(path, file, { contentType: file.type });
     setUploadingPhoto(false);

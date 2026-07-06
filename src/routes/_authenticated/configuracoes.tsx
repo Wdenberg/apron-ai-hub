@@ -90,7 +90,10 @@ function SettingsPage() {
     mutationFn: async ({ file, kind }: { file: File; kind: "logo" | "cover" }) => {
       if (!store?.id) throw new Error("Sem loja");
       if (file.size > 5 * 1024 * 1024) throw new Error("Arquivo maior que 5MB");
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      if (!ALLOWED.includes(file.type)) throw new Error("Somente imagens (JPEG, PNG, WEBP, GIF) são permitidas");
+      const extByMime: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+      const ext = extByMime[file.type];
       const path = `${store.id}/${kind}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
