@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
@@ -36,6 +36,7 @@ type Store = {
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { data: store, isLoading } = useQuery({
     queryKey: ["my-store-full"],
     queryFn: async () => {
@@ -43,6 +44,15 @@ function SettingsPage() {
         .select("id, name, slug, whatsapp, description, address, city, state, is_open, logo_url, cover_url")
         .maybeSingle();
       return data as Store | null;
+    },
+  });
+
+  const { data: productsCount } = useQuery({
+    queryKey: ["products-count", store?.id],
+    enabled: !!store?.id,
+    queryFn: async () => {
+      const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", store!.id);
+      return count ?? 0;
     },
   });
 
@@ -108,10 +118,27 @@ function SettingsPage() {
   }
 
   if (isLoading) return <AppShell><div className="text-muted-foreground">Carregando...</div></AppShell>;
-  if (!store) return <AppShell><CreateStoreForm onCreated={() => qc.invalidateQueries({ queryKey: ["my-store-full"] })} /></AppShell>;
+  if (!store) return (
+    <AppShell>
+      <CreateStoreForm onCreated={() => {
+        qc.invalidateQueries({ queryKey: ["my-store-full"] });
+        toast.message("Agora cadastre seu primeiro produto.");
+        navigate({ to: "/produtos" });
+      }} />
+    </AppShell>
+  );
 
   return (
     <AppShell>
+      {productsCount === 0 && (
+        <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="font-semibold">Próximo passo: monte seu catálogo</div>
+            <p className="text-sm text-muted-foreground">Cadastre seus produtos com nome, foto, descrição e preço para começar a vender.</p>
+          </div>
+          <Link to="/produtos"><Button><Rocket className="h-4 w-4 mr-1" /> Criar produtos</Button></Link>
+        </div>
+      )}
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Configurações da loja</h1>
