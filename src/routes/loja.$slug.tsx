@@ -26,13 +26,13 @@ export const Route = createFileRoute("/loja/$slug")({
         is_open: boolean; logo_url: string | null; cover_url: string | null;
       }>();
     if (!store) throw notFound();
-    const { data: products } = await supabase
-      .from("products")
-      .select("id, name, description, price, stock, category, photo_url")
-      .eq("store_id", store.id)
-      .eq("active", true)
-      .order("category", { ascending: true });
-    return { store, products: products ?? [] };
+    const { data: products } = await supabase.rpc("list_public_products" as never, {
+      _slug: params.slug,
+    } as never);
+    return { store, products: (products ?? []) as Array<{
+      id: string; name: string; description: string | null; price: number;
+      stock: number; category: string | null; photo_url: string | null; store_id: string;
+    }> };
   },
   component: PublicStore,
   notFoundComponent: () => (
