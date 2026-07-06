@@ -243,6 +243,34 @@ function PublicStore() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!lastOrder} onOpenChange={(o) => !o && setLastOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pedido #{lastOrder?.number} enviado! 🎉</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Continuamos sua conversa com a loja pelo WhatsApp. Você pode acompanhar seus pedidos futuros criando uma conta grátis.
+          </p>
+          {!isLoggedIn ? (
+            <div className="flex flex-col gap-2 pt-2">
+              <Button asChild size="lg">
+                <Link to="/entrar" search={{ mode: "signup", redirect: "/minhas-compras" }}>
+                  Criar conta grátis
+                </Link>
+              </Button>
+              <Button variant="ghost" onClick={() => setLastOrder(null)}>Agora não</Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 pt-2">
+              <Button asChild size="lg">
+                <Link to="/minhas-compras">Ver meus pedidos</Link>
+              </Button>
+              <Button variant="ghost" onClick={() => setLastOrder(null)}>Continuar comprando</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
