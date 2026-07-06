@@ -83,8 +83,8 @@ function SettingsPage() {
       const path = `${store.id}/${kind}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      const col = kind === "logo" ? "logo_url" : "cover_url";
-      const { error: uerr } = await supabase.from("stores").update({ [col]: path }).eq("id", store.id);
+      const patch = kind === "logo" ? { logo_url: path } : { cover_url: path };
+      const { error: uerr } = await supabase.from("stores").update(patch).eq("id", store.id);
       if (uerr) throw uerr;
     },
     onSuccess: () => {
