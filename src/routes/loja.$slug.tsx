@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatBRL, whatsappLink } from "@/lib/format";
+import { formatBRL } from "@/lib/format";
+import { openWhatsAppOrder } from "@/lib/whatsapp";
 import { toast } from "sonner";
 import { ShoppingBag, MapPin, MessageCircle, Plus, Minus, X } from "lucide-react";
 import { z } from "zod";
@@ -103,12 +104,19 @@ function PublicStore() {
       } as never);
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      return row as { id: string; order_number: number };
+      return { ...(row as { id: string; order_number: number }), payload };
     },
     onSuccess: (order) => {
-      const lines = items.map((i) => `• ${i.qty}x ${i.name} — ${formatBRL(i.price * i.qty)}`).join("\n");
-      const msg = `Olá! Fiz o pedido #${order.order_number} na sua loja ${store.name}.\n\n${lines}\n\nTotal: ${formatBRL(total)}`;
-      window.open(whatsappLink(store.whatsapp, msg), "_blank");
+      openWhatsAppOrder({
+        storeName: store.name,
+        storePhone: store.whatsapp,
+        orderNumber: order.order_number,
+        customerName: order.payload.name,
+        customerPhone: order.payload.whatsapp,
+        items: items.map((i) => ({ name: i.name, quantity: i.qty, unit_price: i.price })),
+        total,
+        notes: order.payload.notes ?? null,
+      });
       setCart({}); setCheckoutOpen(false); setLastOrder({ number: order.order_number });
       toast.success(`Pedido #${order.order_number} enviado!`);
     },
