@@ -1,7 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation } from "@tanstack/react-query";
+import { StoreImage, resolveStoreAssetUrl } from "@/components/StoreImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +57,10 @@ function PublicStore() {
   const { store, products } = Route.useLoaderData();
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  useEffect(() => {
+    resolveStoreAssetUrl(store.cover_url).then(setCoverUrl);
+  }, [store.cover_url]);
 
   const items = Object.values(cart);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -120,14 +125,18 @@ function PublicStore() {
   return (
     <div className="min-h-screen bg-background pb-32">
       <div className="h-40 md:h-56 relative"
-        style={{ background: store.cover_url ? `url(${store.cover_url}) center/cover` : "var(--gradient-warm)" }}>
+        style={{ background: coverUrl ? `url(${coverUrl}) center/cover` : "var(--gradient-warm)" }}>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
       </div>
       <div className="max-w-3xl mx-auto px-4 -mt-16 relative">
         <div className="rounded-2xl bg-card border border-border p-5 shadow-lg flex gap-4 items-start">
-          <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
-            {store.logo_url ? <img src={store.logo_url} alt="" className="h-full w-full object-cover" /> : <ShoppingBag className="h-7 w-7 text-primary" />}
-          </div>
+          {store.logo_url ? (
+            <StoreImage path={store.logo_url} alt={store.name} className="h-16 w-16 rounded-xl object-cover shrink-0" fallbackClassName="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0" />
+          ) : (
+            <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-7 w-7 text-primary" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold truncate">{store.name}</h1>
@@ -158,9 +167,11 @@ function PublicStore() {
                   const inCart = cart[p.id]?.qty ?? 0;
                   return (
                     <div key={p.id} className="rounded-2xl border border-border bg-card p-4 flex gap-4 items-center">
-                      <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 shrink-0 overflow-hidden">
-                        {p.photo_url && <img src={p.photo_url} alt="" className="h-full w-full object-cover" />}
-                      </div>
+                      {p.photo_url ? (
+                        <StoreImage path={p.photo_url} alt={p.name} className="h-16 w-16 rounded-xl object-cover shrink-0" fallbackClassName="h-16 w-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 shrink-0" />
+                      ) : (
+                        <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold">{p.name}</div>
                         {p.description && <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>}
