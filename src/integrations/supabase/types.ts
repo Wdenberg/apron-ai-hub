@@ -779,6 +779,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_public_products: {
+        Args: { _slug: string }
+        Returns: {
+          category: string
+          description: string
+          id: string
+          name: string
+          photo_url: string
+          price: number
+          stock: number
+          store_id: string
+        }[]
+      }
       my_orders: {
         Args: never
         Returns: {
