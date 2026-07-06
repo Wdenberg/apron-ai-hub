@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
           "Sua loja digital, pedidos organizados, estoque no controle e vendas na palma da mão. Feito para quem cozinha e vende.",
       },
       { property: "og:title", content: "ProntoPede — Do caderno pro digital em minutos" },
-      { property: "og:description", content: "Cardápio digital, pedidos via WhatsApp e controle de estoque por R$ 29,90/mês." },
+      { property: "og:description", content: "Cardápio digital, pedidos via WhatsApp e controle de estoque a partir de R$ 39,90/mês." },
     ],
   }),
   component: Index,
@@ -74,7 +74,7 @@ function Index() {
                 <Button size="lg" variant="outline">Ver como funciona</Button>
               </a>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">Depois, R$ 29,90/mês. Cancela quando quiser.</p>
+            <p className="mt-4 text-sm text-muted-foreground">Depois, a partir de R$ 39,90/mês. Cancela quando quiser.</p>
           </div>
 
           <div className="relative">
@@ -136,16 +136,48 @@ function Index() {
       </section>
 
       <section id="pricing" className="bg-muted/40 border-y border-border">
-        <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Preço único e justo.</h2>
-          <p className="mt-3 text-muted-foreground">Sem taxa por pedido. Sem letras miúdas.</p>
-          <div className="mt-10 mx-auto max-w-md rounded-3xl border-2 border-primary bg-card p-8 shadow-xl shadow-primary/20 text-left">
-            <div className="text-sm font-semibold text-primary uppercase tracking-wide">Plano ProntoPede</div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-5xl font-extrabold">R$ 29,90</span>
-              <span className="text-muted-foreground">/mês</span>
-            </div>
-            <ul className="mt-6 space-y-3 text-sm">
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <div className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Escolha o plano que combina com você.</h2>
+            <p className="mt-3 text-muted-foreground">Sem taxa por pedido. Sem letras miúdas. Quanto maior o período, maior o desconto.</p>
+          </div>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { name: "Mensal", price: "R$ 39,90", period: "/mês", note: "Cobrança mensal", highlight: false },
+              { name: "Trimestral", price: "R$ 107,73", period: "/trimestre", note: "Equivale a R$ 35,91/mês", highlight: false },
+              { name: "Semestral", price: "R$ 203,49", period: "/semestre", note: "Equivale a R$ 33,92/mês", highlight: true },
+              { name: "Anual", price: "R$ 383,04", period: "/ano", note: "Equivale a R$ 31,92/mês", highlight: false },
+            ].map((p) => (
+              <div
+                key={p.name}
+                className={`rounded-3xl border bg-card p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                  p.highlight ? "border-2 border-primary shadow-xl shadow-primary/20" : "border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-semibold uppercase tracking-wide text-primary">{p.name}</div>
+                  {p.highlight && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold">Mais escolhido</span>
+                  )}
+                </div>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold">{p.price}</span>
+                  <span className="text-muted-foreground text-sm">{p.period}</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{p.note}</div>
+                <Link to="/auth" search={{ mode: "signup" } as never}>
+                  <Button size="lg" className="w-full mt-6" variant={p.highlight ? "default" : "outline"}>
+                    Começar teste grátis
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 mx-auto max-w-2xl rounded-2xl border border-border bg-card p-6">
+            <div className="text-sm font-semibold text-primary uppercase tracking-wide">Todos os planos incluem</div>
+            <ul className="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
               {[
                 "Loja digital com link e QR Code exclusivos",
                 "Pedidos ilimitados via WhatsApp",
@@ -159,9 +191,6 @@ function Index() {
                 </li>
               ))}
             </ul>
-            <Link to="/auth" search={{ mode: "signup" } as never}>
-              <Button size="lg" className="w-full mt-8">Começar teste grátis</Button>
-            </Link>
           </div>
         </div>
       </section>
