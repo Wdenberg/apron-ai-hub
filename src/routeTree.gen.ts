@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MinhasComprasRouteImport } from './routes/minhas-compras'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -33,6 +34,11 @@ import { Route as AdminLojistasIdRouteImport } from './routes/admin/lojistas.$id
 const MinhasComprasRoute = MinhasComprasRouteImport.update({
   id: '/minhas-compras',
   path: '/minhas-compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/minhas-compras': typeof MinhasComprasRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/minhas-compras': typeof MinhasComprasRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/entrar': typeof EntrarRoute
   '/minhas-compras': typeof MinhasComprasRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
+    | '/entrar'
     | '/minhas-compras'
     | '/assinatura'
     | '/configuracoes'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/entrar'
     | '/minhas-compras'
     | '/assinatura'
     | '/configuracoes'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/admin'
     | '/auth'
+    | '/entrar'
     | '/minhas-compras'
     | '/_authenticated/assinatura'
     | '/_authenticated/configuracoes'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  EntrarRoute: typeof EntrarRoute
   MinhasComprasRoute: typeof MinhasComprasRoute
   LojaSlugRoute: typeof LojaSlugRoute
 }
@@ -277,6 +290,13 @@ declare module '@tanstack/react-router' {
       path: '/minhas-compras'
       fullPath: '/minhas-compras'
       preLoaderRoute: typeof MinhasComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -477,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  EntrarRoute: EntrarRoute,
   MinhasComprasRoute: MinhasComprasRoute,
   LojaSlugRoute: LojaSlugRoute,
 }
