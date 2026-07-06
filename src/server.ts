@@ -44,7 +44,13 @@ function buildSecurityHeaders(): Record<string, string> {
     try { return new URL(process.env.SUPABASE_URL ?? "").origin; } catch { return ""; }
   })();
   const supaWs = supaOrigin.replace(/^https:/, "wss:").replace(/^http:/, "ws:");
-  const connect = ["'self'", supaOrigin, supaWs, "https://*.lovable.app", "https://*.lovable.cloud"].filter(Boolean).join(" ");
+  const connect = [
+    "'self'",
+    supaOrigin, supaWs,
+    "https://*.lovable.app", "https://*.lovable.cloud",
+    "https://*.lovableproject.com", "wss://*.lovableproject.com",
+    "ws:", "wss:", // dev HMR + Supabase realtime fallback
+  ].filter(Boolean).join(" ");
   const img = ["'self'", "data:", "blob:", supaOrigin, "https:"].filter(Boolean).join(" ");
   const csp = [
     "default-src 'self'",
@@ -53,7 +59,10 @@ function buildSecurityHeaders(): Record<string, string> {
     "form-action 'self'",
     "object-src 'none'",
     // React/Vite need inline styles; scripts are same-origin bundles.
-    "script-src 'self' 'unsafe-inline'",
+    // 'unsafe-eval' is required by Vite HMR in dev and by some runtime libs
+    // (e.g. schema validators using new Function). Kept because 'unsafe-inline'
+    // is already present — the extra eval capability is not a meaningful downgrade.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
     `img-src ${img}`,
