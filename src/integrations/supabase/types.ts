@@ -460,6 +460,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           address: string | null
@@ -650,6 +671,10 @@ export type Database = {
       }
       admin_store_detail: { Args: { _store_id: string }; Returns: Json }
       admin_trial_metrics: { Args: { _window_days?: number }; Returns: Json }
+      check_rate_limit: {
+        Args: { _action: string; _max: number; _window_seconds: number }
+        Returns: undefined
+      }
       create_public_order: {
         Args: {
           _customer_name: string
