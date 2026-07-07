@@ -151,23 +151,27 @@ function Index() {
             ].map((p) => (
               <div
                 key={p.name}
-                className={`rounded-3xl border bg-card p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                className={`flex flex-col rounded-3xl border bg-card p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
                   p.highlight ? "border-2 border-primary shadow-xl shadow-primary/20" : "border-border"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold uppercase tracking-wide text-primary">{p.name}</div>
-                  {p.highlight && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold">Mais escolhido</span>
-                  )}
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                      p.highlight ? "bg-primary/10 text-primary" : "invisible"
+                    }`}
+                  >
+                    Mais escolhido
+                  </span>
                 </div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold">{p.price}</span>
+                <div className="mt-3 flex items-baseline gap-1 whitespace-nowrap">
+                  <span className="text-3xl lg:text-4xl font-extrabold">{p.price}</span>
                   <span className="text-muted-foreground text-sm">{p.period}</span>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">{p.note}</div>
-                <Link to="/auth" search={{ mode: "signup" } as never}>
-                  <Button size="lg" className="w-full mt-6" variant={p.highlight ? "default" : "outline"}>
+                <Link to="/auth" search={{ mode: "signup" } as never} className="mt-auto pt-6">
+                  <Button size="lg" className="w-full" variant={p.highlight ? "default" : "outline"}>
                     Começar teste grátis
                   </Button>
                 </Link>
