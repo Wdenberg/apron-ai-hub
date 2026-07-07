@@ -78,7 +78,7 @@ function TrialPage() {
                     </td>
                     <td className="px-4 py-3 text-xs">{r.days_since_trial}d</td>
                     <td className="px-4 py-3 text-xs capitalize">{r.reason ?? "—"}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <a href={whatsappLink(r.whatsapp, `Olá ${r.name}, notei que o seu teste da ProntoPede terminou. Posso te ajudar?`)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-success hover:underline text-xs">
                         <MessageCircle className="h-3 w-3" /> WhatsApp
                       </a>
