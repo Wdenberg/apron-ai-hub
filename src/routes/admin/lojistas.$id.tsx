@@ -104,7 +104,7 @@ function LojistaDetail() {
                 </a>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-4 mt-6 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 text-sm">
               <div><div className="text-xs text-muted-foreground uppercase">Status</div><div className="font-semibold mt-1">{s.subscription_status}</div></div>
               <div><div className="text-xs text-muted-foreground uppercase">Trial acaba</div><div className="font-semibold mt-1">{new Date(s.trial_ends_at).toLocaleDateString("pt-BR")}</div></div>
               <div><div className="text-xs text-muted-foreground uppercase">Pedidos</div><div className="font-semibold mt-1">{data.total_orders}</div></div>
@@ -135,9 +135,9 @@ function LojistaDetail() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Adicionar nota..." rows={2} maxLength={500} />
-              <Button onClick={() => addNote.mutate()} disabled={!note.trim() || addNote.isPending}>Salvar</Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Adicionar nota..." rows={2} maxLength={500} className="flex-1" />
+              <Button className="w-full sm:w-auto shrink-0" onClick={() => addNote.mutate()} disabled={!note.trim() || addNote.isPending}>Salvar</Button>
             </div>
           </div>
         </div>
@@ -145,9 +145,9 @@ function LojistaDetail() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-card p-5">
             <h3 className="font-semibold mb-3">Estender teste</h3>
-            <div className="flex gap-2">
-              <Input type="number" min="1" max="90" value={days} onChange={(e) => setDays(e.target.value)} className="w-20" />
-              <Button onClick={() => extendTrial.mutate()} disabled={extendTrial.isPending}>+ dias</Button>
+            <div className="flex flex-nowrap gap-2">
+              <Input type="number" min="1" max="90" value={days} onChange={(e) => setDays(e.target.value)} className="w-24 shrink-0" />
+              <Button className="flex-1 sm:flex-none shrink-0" onClick={() => extendTrial.mutate()} disabled={extendTrial.isPending}>+ dias</Button>
             </div>
           </div>
 
