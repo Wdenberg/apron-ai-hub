@@ -127,10 +127,10 @@ function LojistasPage() {
 
   return (
     <AdminShell title="Lojistas">
-      <div className="mb-4 flex flex-wrap gap-3 items-center">
-        <Input placeholder="Buscar por nome, slug ou e-mail" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+      <div className="mb-4 flex flex-wrap gap-3 items-stretch sm:items-center">
+        <Input placeholder="Buscar por nome, slug ou e-mail" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:max-w-xs" />
         <Select value={status || "all"} onValueChange={(v) => setStatus(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos status</SelectItem>
             <SelectItem value="trial">Em teste</SelectItem>
@@ -141,7 +141,7 @@ function LojistasPage() {
           </SelectContent>
         </Select>
         <Select value={health || "all"} onValueChange={(v) => setHealth(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Saúde" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Saúde" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toda saúde</SelectItem>
             <SelectItem value="green">🟢 Saudável</SelectItem>
@@ -149,8 +149,8 @@ function LojistasPage() {
             <SelectItem value="red">🔴 Crítico</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex-1" />
-        <Button onClick={() => setCreateOpen(true)}><UserPlus className="h-4 w-4 mr-1" /> Novo lojista</Button>
+        <div className="hidden sm:block sm:flex-1" />
+        <Button className="w-full sm:w-auto" onClick={() => setCreateOpen(true)}><UserPlus className="h-4 w-4 mr-1" /> Novo lojista</Button>
       </div>
 
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -191,8 +191,8 @@ function LojistasPage() {
                   <td className="px-4 py-3"><HealthDot value={s.health} /></td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(s.last_login_at)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(s.last_order_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-nowrap items-center justify-end gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
