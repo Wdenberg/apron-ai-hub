@@ -103,7 +103,7 @@ function CampanhasPage() {
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={6} maxLength={800} className="mt-1" />
             <div className="text-xs text-muted-foreground mt-1">Variáveis: <code>{"{{nome_loja}}"}</code>, <code>{"{{dias_restantes}}"}</code></div>
           </div>
-          <Button onClick={() => create.mutate()} disabled={!message.trim() || !recipients.data?.length || create.isPending}>
+          <Button className="w-full sm:w-auto" onClick={() => create.mutate()} disabled={!message.trim() || !recipients.data?.length || create.isPending}>
             <Send className="h-4 w-4 mr-2" /> Criar campanha
           </Button>
         </div>
@@ -134,7 +134,7 @@ function CampanhasPage() {
         </div>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="mt-8 rounded-2xl border border-border bg-card overflow-hidden overflow-x-auto">
         <div className="px-5 py-3 border-b border-border font-semibold">Histórico de campanhas</div>
         <table className="w-full text-sm">
           <thead className="bg-muted text-xs uppercase tracking-wider text-muted-foreground">
