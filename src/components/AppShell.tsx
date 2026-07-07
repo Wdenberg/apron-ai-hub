@@ -91,14 +91,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1" />
           {store?.slug && (
-            <a
-              href={`/loja/${store.slug}`}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              to="/loja/$slug"
+              params={{ slug: store.slug }}
               className="text-xs sm:text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
             >
               Ver loja pública
-            </a>
+            </Link>
           )}
           {store?.subscription_status === "trial" && (
             <span className="hidden sm:inline text-xs px-2 py-1 rounded-full bg-warning/20 text-warning-foreground font-medium">
