@@ -1,7 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getCurrentUser,
+  signInWithPassword,
+  signUpWithPassword,
+} from "@/services/authService";
+import {
+  isPhoneTakenByOther,
+  updateProfile,
+} from "@/services/profileService";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,8 +47,8 @@ function CustomerAuth() {
   const redirectTo = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/minhas-compras";
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: redirectTo, replace: true });
+    getCurrentUser().then((user) => {
+      if (user) navigate({ to: redirectTo, replace: true });
     });
   }, [navigate, redirectTo]);
 
@@ -60,34 +68,29 @@ function CustomerAuth() {
     setLoading(true);
     try {
       // Check phone uniqueness before signup
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("whatsapp", parsed.data.whatsapp)
-        .maybeSingle();
-      if (existing) {
+      const taken = await isPhoneTakenByOther(parsed.data.whatsapp);
+      if (taken) {
         toast.error("Este telefone já está cadastrado em outra conta.");
         setLoading(false);
         return;
       }
-      const { data: signup, error } = await supabase.auth.signUp({
-        email: parsed.data.email,
-        password: parsed.data.password,
-        options: {
+      const signup = await signUpWithPassword(
+        parsed.data.email,
+        parsed.data.password,
+        {
           emailRedirectTo: window.location.origin + redirectTo,
           data: {
             full_name: parsed.data.name,
             signup_source: "customer",
           },
         },
-      });
-      if (error) throw error;
+      );
       // Trigger created profile with full_name; persist whatsapp
       if (signup.user) {
-        await supabase
-          .from("profiles")
-          .update({ whatsapp: parsed.data.whatsapp, full_name: parsed.data.name })
-          .eq("id", signup.user.id);
+        await updateProfile(signup.user.id, {
+          whatsapp: parsed.data.whatsapp,
+          full_name: parsed.data.name,
+        });
       }
       toast.success("Conta criada! Bem-vindo.");
       navigate({ to: redirectTo, replace: true });
@@ -106,8 +109,7 @@ function CustomerAuth() {
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword(parsed.data);
-      if (error) throw error;
+      await signInWithPassword(parsed.data.email, parsed.data.password);
       navigate({ to: redirectTo, replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao entrar");
