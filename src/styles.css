@@ -163,3 +163,54 @@
     color: var(--color-foreground);
   }
 }
+
+/* Print — receipt for order tickets */
+.print-receipt {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible !important;
+  }
+  .print-receipt {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 6px 8px;
+    color: #000;
+    background: #fff;
+    font-family: "Courier New", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .print-receipt h1 {
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+  .print-receipt hr {
+    border: none;
+    border-top: 1px dashed #000;
+    margin: 6px 0;
+  }
+  .print-receipt .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .print-receipt .muted {
+    font-size: 11px;
+  }
+  @page {
+    margin: 4mm;
+  }
+}
