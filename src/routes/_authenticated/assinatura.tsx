@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { useMyStoreSubscription } from "@/hooks/useStore";
 import { CreditCard, Calendar, CheckCircle2, AlertTriangle, XCircle, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
@@ -42,16 +41,7 @@ function daysUntil(iso: string | null | undefined) {
 }
 
 function AssinaturaPage() {
-  const { data: store, isLoading } = useQuery({
-    queryKey: ["my-store-subscription"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("stores")
-        .select("id, name, subscription_status, trial_ends_at, created_at, stripe_subscription_id")
-        .maybeSingle();
-      return data;
-    },
-  });
+  const { data: store, isLoading } = useMyStoreSubscription();
 
   if (isLoading) {
     return (
