@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   listActiveOrders,
   updateOrder,
@@ -13,7 +14,7 @@ import {
 
 export function useActiveOrders(storeId: string | null | undefined) {
   return useQuery({
-    queryKey: ["orders", storeId],
+    queryKey: qk.orders.byStore(storeId),
     enabled: !!storeId,
     refetchInterval: 15000,
     queryFn: () => listActiveOrders(storeId!),
@@ -32,7 +33,7 @@ export function useUpdateOrder() {
       const { id, ...changes } = payload;
       return updateOrder(id, changes);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => invalidate.orders(qc),
   });
 }
 
@@ -42,7 +43,7 @@ export function fetchOrderItems(ids: string[]) {
 
 export function useQuickSales(storeId: string | null | undefined, days: number) {
   return useQuery({
-    queryKey: ["quick-sales", storeId, days],
+    queryKey: qk.orders.quickSales(storeId, days),
     enabled: !!storeId,
     queryFn: () => listQuickSales(storeId!, days),
   });
@@ -53,9 +54,9 @@ export function useCreateQuickSale() {
   return useMutation({
     mutationFn: createQuickSale,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["quick-sales"] });
-      qc.invalidateQueries({ queryKey: ["products-active"] });
-      qc.invalidateQueries({ queryKey: ["products"] });
+      invalidate.quickSales(qc);
+      invalidate.productsActive(qc);
+      invalidate.products(qc);
     },
   });
 }
