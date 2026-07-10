@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   getProfile,
   getProfileBasic,
@@ -9,7 +10,7 @@ import {
 
 export function useProfile(userId: string | null | undefined) {
   return useQuery({
-    queryKey: ["my-profile", userId],
+    queryKey: qk.profile.mine(userId),
     enabled: !!userId,
     queryFn: () => getProfile(userId!),
   });
@@ -17,7 +18,7 @@ export function useProfile(userId: string | null | undefined) {
 
 export function useProfileBasic(userId: string | null | undefined) {
   return useQuery({
-    queryKey: ["profile", userId],
+    queryKey: qk.profile.basic(userId),
     enabled: !!userId,
     queryFn: () => getProfileBasic(userId!),
   });
@@ -30,7 +31,7 @@ export function useUpdateProfile() {
       userId: string;
       patch: Parameters<typeof updateProfile>[1];
     }) => updateProfile(payload.userId, payload.patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-profile"] }),
+    onSuccess: () => invalidate.profile(qc),
   });
 }
 
@@ -39,7 +40,7 @@ export function useUploadAvatar() {
   return useMutation({
     mutationFn: (payload: { userId: string; file: File }) =>
       uploadAvatar(payload.userId, payload.file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-profile"] }),
+    onSuccess: () => invalidate.profile(qc),
   });
 }
 
