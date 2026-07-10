@@ -3,8 +3,13 @@ import { useState } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { StoreImage } from "@/components/StoreImage";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMyStoreShell } from "@/hooks/useStore";
+import {
+  useProducts,
+  useUpsertProduct,
+  useToggleProductActive,
+  useUploadProductPhoto,
+} from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,26 +45,15 @@ const schema = z.object({
 });
 
 function ProductsPage() {
-  const qc = useQueryClient();
   const [editing, setEditing] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [categoryValue, setCategoryValue] = useState<string>("");
 
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () => (await supabase.from("stores").select("id").maybeSingle()).data,
-  });
-
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products", store?.id],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select("*").eq("store_id", store!.id).order("created_at", { ascending: false });
-      return (data ?? []) as Product[];
-    },
-  });
+  const { data: store } = useMyStoreShell();
+  const { data: products, isLoading } = useProducts(store?.id);
+  const uploadPhotoMut = useUploadProductPhoto();
+  const uploadingPhoto = uploadPhotoMut.isPending;
 
   const categories = Array.from(new Set((products ?? []).map((p) => p.category).filter(Boolean))) as string[];
 
@@ -77,57 +71,19 @@ function ProductsPage() {
     setDialogOpen(true);
   }
 
-  async function handlePhoto(file: File) {
+  function handlePhoto(file: File) {
     if (!store?.id) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Imagem maior que 5MB"); return; }
-    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!ALLOWED.includes(file.type)) { toast.error("Somente imagens (JPEG, PNG, WEBP, GIF) são permitidas"); return; }
-    setUploadingPhoto(true);
-    const extByMime: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
-    const ext = extByMime[file.type];
-    const path = `${store.id}/produtos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("store-assets").upload(path, file, { contentType: file.type });
-    setUploadingPhoto(false);
-    if (error) { toast.error(error.message); return; }
-    setPhotoPath(path);
+    uploadPhotoMut.mutate(
+      { storeId: store.id, file },
+      {
+        onSuccess: (path) => setPhotoPath(path),
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
   }
 
-  const upsert = useMutation({
-    mutationFn: async (payload: z.infer<typeof schema> & { id?: string }) => {
-      if (!store?.id) throw new Error("Sem loja");
-      const row = {
-        store_id: store.id,
-        name: payload.name,
-        description: payload.description || null,
-        price: payload.price,
-        stock: payload.stock,
-        category: payload.category || null,
-        active: payload.stock > 0,
-        photo_url: photoPath,
-      };
-      if (payload.id) {
-        const { error } = await supabase.from("products").update(row).eq("id", payload.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("products").insert(row);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["products"] });
-      setDialogOpen(false); setEditing(null); setPhotoPath(null); setCategoryValue("");
-      toast.success("Produto salvo!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const toggleActive = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("products").update({ active }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
-  });
+  const upsert = useUpsertProduct();
+  const toggleActive = useToggleProductActive();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -140,7 +96,29 @@ function ProductsPage() {
       category: categoryValue,
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
-    upsert.mutate({ ...parsed.data, id: editing?.id });
+    if (!store?.id) { toast.error("Sem loja"); return; }
+    upsert.mutate(
+      {
+        id: editing?.id,
+        row: {
+          store_id: store.id,
+          name: parsed.data.name,
+          description: parsed.data.description || null,
+          price: parsed.data.price,
+          stock: parsed.data.stock,
+          category: parsed.data.category || null,
+          active: parsed.data.stock > 0,
+          photo_url: photoPath,
+        },
+      },
+      {
+        onSuccess: () => {
+          setDialogOpen(false); setEditing(null); setPhotoPath(null); setCategoryValue("");
+          toast.success("Produto salvo!");
+        },
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
   }
 
   return (

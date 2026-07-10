@@ -3,8 +3,17 @@ import { useState, useEffect } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { StoreImage } from "@/components/StoreImage";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useMyStoreFull,
+  useProductsCount,
+  useUpdateStore,
+  useToggleStoreOpen,
+  useUploadStoreAsset,
+  useCreateStore,
+} from "@/hooks/useStore";
+import { getCurrentUser } from "@/services/authService";
+import { createStore as createStoreSvc } from "@/services/storeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,76 +46,11 @@ type Store = {
 function SettingsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data: store, isLoading } = useQuery({
-    queryKey: ["my-store-full"],
-    queryFn: async () => {
-      const { data } = await supabase.from("stores")
-        .select("id, name, slug, whatsapp, description, address, city, state, is_open, logo_url, cover_url")
-        .maybeSingle();
-      return data as Store | null;
-    },
-  });
-
-  const { data: productsCount } = useQuery({
-    queryKey: ["products-count", store?.id],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const { count } = await supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", store!.id);
-      return count ?? 0;
-    },
-  });
-
-  const save = useMutation({
-    mutationFn: async (payload: z.infer<typeof schema>) => {
-      if (!store?.id) throw new Error("Sem loja");
-      const { error } = await supabase.from("stores").update({
-        name: payload.name,
-        whatsapp: payload.whatsapp,
-        description: payload.description || null,
-        address: payload.address || null,
-        city: payload.city || null,
-        state: payload.state || null,
-      }).eq("id", store.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-store-full"] });
-      qc.invalidateQueries({ queryKey: ["my-store"] });
-      toast.success("Configurações salvas");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const toggleOpen = useMutation({
-    mutationFn: async (v: boolean) => {
-      if (!store?.id) return;
-      const { error } = await supabase.from("stores").update({ is_open: v }).eq("id", store.id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-store-full"] }),
-  });
-
-  const uploadAsset = useMutation({
-    mutationFn: async ({ file, kind }: { file: File; kind: "logo" | "cover" }) => {
-      if (!store?.id) throw new Error("Sem loja");
-      if (file.size > 5 * 1024 * 1024) throw new Error("Arquivo maior que 5MB");
-      const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-      if (!ALLOWED.includes(file.type)) throw new Error("Somente imagens (JPEG, PNG, WEBP, GIF) são permitidas");
-      const extByMime: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
-      const ext = extByMime[file.type];
-      const path = `${store.id}/${kind}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("store-assets").upload(path, file, { upsert: true, contentType: file.type });
-      if (error) throw error;
-      const patch = kind === "logo" ? { logo_url: path } : { cover_url: path };
-      const { error: uerr } = await supabase.from("stores").update(patch).eq("id", store.id);
-      if (uerr) throw uerr;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-store-full"] });
-      toast.success("Imagem enviada");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const { data: store, isLoading } = useMyStoreFull();
+  const { data: productsCount } = useProductsCount(store?.id);
+  const save = useUpdateStore();
+  const toggleOpen = useToggleStoreOpen();
+  const uploadAsset = useUploadStoreAsset();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -117,7 +61,24 @@ function SettingsPage() {
       city: fd.get("city"), state: fd.get("state"),
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
-    save.mutate(parsed.data);
+    if (!store?.id) { toast.error("Sem loja"); return; }
+    save.mutate(
+      {
+        id: store.id,
+        patch: {
+          name: parsed.data.name,
+          whatsapp: parsed.data.whatsapp,
+          description: parsed.data.description || null,
+          address: parsed.data.address || null,
+          city: parsed.data.city || null,
+          state: parsed.data.state || null,
+        },
+      },
+      {
+        onSuccess: () => toast.success("Configurações salvas"),
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
   }
 
   if (isLoading) return <AppShell><div className="text-muted-foreground">Carregando...</div></AppShell>;
@@ -149,7 +110,10 @@ function SettingsPage() {
         </div>
         <div className="flex items-center gap-3 rounded-full border border-border bg-card px-4 py-2">
           <span className="text-sm">Loja {store.is_open ? "aberta" : "fechada"}</span>
-          <Switch checked={store.is_open} onCheckedChange={(v) => toggleOpen.mutate(v)} />
+          <Switch
+            checked={store.is_open}
+            onCheckedChange={(v) => toggleOpen.mutate({ id: store.id, isOpen: v })}
+          />
         </div>
       </div>
 
@@ -203,14 +167,14 @@ function SettingsPage() {
             <h2 className="font-semibold mb-3">Logo</h2>
             <div className="flex items-center gap-4">
               <StoreImage path={store.logo_url} alt="Logo" className="h-20 w-20 rounded-full object-cover border border-border" fallbackClassName="h-20 w-20 rounded-full border border-dashed border-border flex items-center justify-center" />
-              <UploadButton onFile={(f) => uploadAsset.mutate({ file: f, kind: "logo" })} pending={uploadAsset.isPending} />
+              <UploadButton onFile={(f) => uploadAsset.mutate({ storeId: store.id, file: f, kind: "logo" }, { onSuccess: () => toast.success("Imagem enviada"), onError: (e: Error) => toast.error(e.message) })} pending={uploadAsset.isPending} />
             </div>
           </div>
           <div>
             <h2 className="font-semibold mb-3">Capa</h2>
             <StoreImage path={store.cover_url} alt="Capa" className="h-32 w-full rounded-xl object-cover border border-border" fallbackClassName="h-32 w-full rounded-xl border border-dashed border-border flex items-center justify-center" />
             <div className="mt-3">
-              <UploadButton onFile={(f) => uploadAsset.mutate({ file: f, kind: "cover" })} pending={uploadAsset.isPending} />
+              <UploadButton onFile={(f) => uploadAsset.mutate({ storeId: store.id, file: f, kind: "cover" }, { onSuccess: () => toast.success("Imagem enviada"), onError: (e: Error) => toast.error(e.message) })} pending={uploadAsset.isPending} />
             </div>
           </div>
         </section>
@@ -268,21 +232,25 @@ function CreateStoreForm({ onCreated }: { onCreated: () => void }) {
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     setLoading(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setLoading(false); return; }
-    const { error } = await supabase.from("stores").insert({
-      owner_id: user.user.id,
-      name: parsed.data.name,
-      slug: parsed.data.slug.toLowerCase(),
-      whatsapp: parsed.data.whatsapp,
-      city: parsed.data.city || null,
-      state: parsed.data.state || null,
-      description: parsed.data.description || null,
-    });
-    setLoading(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Loja criada!");
-    onCreated();
+    try {
+      const user = await getCurrentUser();
+      if (!user) { setLoading(false); return; }
+      await createStoreSvc({
+        owner_id: user.id,
+        name: parsed.data.name,
+        slug: parsed.data.slug.toLowerCase(),
+        whatsapp: parsed.data.whatsapp,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        description: parsed.data.description || null,
+      });
+      toast.success("Loja criada!");
+      onCreated();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar loja");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

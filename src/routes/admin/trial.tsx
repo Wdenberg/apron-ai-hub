@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useTrialMetrics, useRecoveryList } from "@/hooks/admin/useAdminTrial";
 import { AdminShell } from "@/components/AdminShell";
 import { whatsappLink } from "@/lib/format";
 import { MessageCircle } from "lucide-react";
@@ -11,27 +10,10 @@ export const Route = createFileRoute("/admin/trial")({
   component: TrialPage,
 });
 
-type Metrics = { converted: number; expired: number; still_trialing: number; canceled: number; reasons: Record<string, number> };
-type Recovery = { store_id: string; name: string; whatsapp: string; days_since_trial: number; owner_email: string | null; reason: string | null };
-
 function TrialPage() {
   const [window, setWindow] = useState(30);
-  const metrics = useQuery({
-    queryKey: ["admin", "trial-metrics", window],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_trial_metrics", { _window_days: window });
-      if (error) throw error;
-      return data as unknown as Metrics;
-    },
-  });
-  const list = useQuery({
-    queryKey: ["admin", "recovery"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_recovery_list");
-      if (error) throw error;
-      return (data ?? []) as Recovery[];
-    },
-  });
+  const metrics = useTrialMetrics(window);
+  const list = useRecoveryList();
 
   const total = (metrics.data?.converted ?? 0) + (metrics.data?.expired ?? 0) + (metrics.data?.canceled ?? 0);
   const convRate = total ? Math.round(((metrics.data?.converted ?? 0) / total) * 100) : 0;

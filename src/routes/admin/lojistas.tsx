@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useAdminStores,
+  useSetSubscriptionStatus,
+  useActivateWithPlan,
+  useCreateLojista,
+} from "@/hooks/admin/useAdminStores";
 import { AdminShell } from "@/components/AdminShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,23 +24,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { z } from "zod";
-import { adminCreateLojista } from "@/lib/admin-lojista.functions";
 
 export const Route = createFileRoute("/admin/lojistas")({
   head: () => ({ meta: [{ title: "Lojistas — Admin ProntoPede" }] }),
   component: LojistasPage,
 });
 
-type Row = {
-  id: string; name: string; slug: string; owner_email: string | null;
-  subscription_status: string; trial_days_left: number; last_login_at: string | null;
-  last_order_at: string | null; health: "green" | "yellow" | "red"; created_at: string;
-  whatsapp: string;
-  plan: "mensal" | "trimestral" | "semestral" | "anual" | null;
-  subscription_ends_at: string | null;
-};
+import type { AdminStoreRow as Row, SubscriptionPlan as Plan } from "@/services/admin/adminStoresService";
 
-type Plan = "mensal" | "trimestral" | "semestral" | "anual";
 const PLAN_LABEL: Record<Plan, string> = {
   mensal: "Mensal — R$ 39,90",
   trimestral: "Trimestral — R$ 107,73",
@@ -46,70 +40,46 @@ const PLAN_LABEL: Record<Plan, string> = {
 };
 
 function LojistasPage() {
-  const qc = useQueryClient();
   const [status, setStatus] = useState<string>("");
   const [health, setHealth] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [createOpen, setCreateOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin", "stores", status, health, search],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_stores", {
-        _status: status || undefined,
-        _health: health || undefined,
-        _search: search || undefined,
-        _limit: 100,
-        _offset: 0,
-      });
-      if (error) throw error;
-      return (data ?? []) as Row[];
-    },
-  });
+  const { data, isLoading } = useAdminStores({ status, health, search });
+  const setStatusMutBase = useSetSubscriptionStatus();
+  const activatePlanMutBase = useActivateWithPlan();
+  const setStatusMut = {
+    ...setStatusMutBase,
+    mutate: (payload: { id: string; next: "blocked" | "active" }) =>
+      setStatusMutBase.mutate(
+        { id: payload.id, status: payload.next },
+        {
+          onSuccess: () => toast.success("Status atualizado"),
+          onError: (e: Error) => toast.error(e.message),
+        },
+      ),
+  };
+  const activatePlanMut = {
+    ...activatePlanMutBase,
+    mutate: (payload: { id: string; plan: Plan }) =>
+      activatePlanMutBase.mutate(payload, {
+        onSuccess: () => toast.success("Assinatura ativada"),
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
-  const setStatusMut = useMutation({
-    mutationFn: async ({ id, next }: { id: string; next: "blocked" | "active" }) => {
-      const { error } = await supabase.rpc("admin_set_subscription_status", {
-        _store_id: id,
-        _status: next,
-        _reason: undefined,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "stores"] });
-      toast.success("Status atualizado");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const activatePlanMut = useMutation({
-    mutationFn: async ({ id, plan }: { id: string; plan: Plan }) => {
-      const { error } = await supabase.rpc("admin_activate_with_plan", {
-        _store_id: id,
-        _plan: plan,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "stores"] });
-      toast.success("Assinatura ativada");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const createFn = useServerFn(adminCreateLojista);
-  const createMut = useMutation({
-    mutationFn: async (payload: z.infer<typeof createFormSchema>) => {
-      return await createFn({ data: payload });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "stores"] });
-      setCreateOpen(false);
-      toast.success("Lojista criado com sucesso");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const createMutBase = useCreateLojista();
+  const createMut = {
+    isPending: createMutBase.isPending,
+    mutate: (payload: z.infer<typeof createFormSchema>) =>
+      createMutBase.mutate(payload, {
+        onSuccess: () => {
+          setCreateOpen(false);
+          toast.success("Lojista criado com sucesso");
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   function submitCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

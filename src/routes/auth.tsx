@@ -1,7 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getCurrentSession,
+  signInWithPassword,
+  signUpWithPassword,
+} from "@/services/authService";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +38,8 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+    getCurrentSession().then((session) => {
+      if (session) navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate]);
 
@@ -53,22 +57,13 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email: parsed.data.email,
-          password: parsed.data.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: { full_name: (fd.get("name") as string | null) ?? "" },
-          },
+        await signUpWithPassword(parsed.data.email, parsed.data.password, {
+          emailRedirectTo: window.location.origin,
+          data: { full_name: (fd.get("name") as string | null) ?? "" },
         });
-        if (error) throw error;
         toast.success("Conta criada! Bem-vindo.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: parsed.data.email,
-          password: parsed.data.password,
-        });
-        if (error) throw error;
+        await signInWithPassword(parsed.data.email, parsed.data.password);
       }
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {

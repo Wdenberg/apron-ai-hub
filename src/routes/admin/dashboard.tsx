@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useAdminOverview } from "@/hooks/admin/useAdminOverview";
 import { AdminShell } from "@/components/AdminShell";
 import { formatBRL } from "@/lib/format";
 import { Users, TrendingUp, AlertTriangle, Clock, CheckCircle2, XCircle } from "lucide-react";
@@ -10,24 +9,8 @@ export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboard,
 });
 
-type Overview = {
-  total: number; active: number; trial: number; trial_expired: number;
-  past_due: number; blocked: number; canceled: number;
-  new_today: number; new_week: number; new_month: number;
-  mrr_estimated_cents: number;
-  revenue_today_cents: number; revenue_week_cents: number; revenue_month_cents: number; revenue_year_cents: number;
-  past_due_amount_cents: number;
-};
-
 function AdminDashboard() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin", "overview"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_overview");
-      if (error) throw error;
-      return data as unknown as Overview;
-    },
-  });
+  const { data, isLoading } = useAdminOverview();
 
   return (
     <AdminShell title="Visão geral">

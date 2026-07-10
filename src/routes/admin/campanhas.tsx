@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useSegmentStores,
+  useCampaigns,
+  useSendCampaign,
+  markRecipientOpened,
+} from "@/hooks/admin/useAdminCampaigns";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,9 +19,6 @@ export const Route = createFileRoute("/admin/campanhas")({
   component: CampanhasPage,
 });
 
-type Recipient = { store_id: string; name: string; whatsapp: string; trial_days_left: number };
-type Campaign = { id: string; segment: string; message_template: string; recipient_count: number; opened_count: number; created_at: string };
-
 const SEGMENTS = [
   { value: "trial", label: "Em teste" },
   { value: "trial_expired", label: "Teste expirado" },
@@ -28,60 +29,42 @@ const SEGMENTS = [
 ];
 
 function CampanhasPage() {
-  const qc = useQueryClient();
   const [segment, setSegment] = useState("trial");
   const [message, setMessage] = useState("Olá {{nome_loja}}! Aqui é da ProntoPede. Como está sua experiência?");
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [sentRecipients, setSentRecipients] = useState<{ id: string; name: string; whatsapp: string; text: string }[]>([]);
 
-  const recipients = useQuery({
-    queryKey: ["admin", "segment", segment],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_segment_stores", { _segment: segment });
-      if (error) throw error;
-      return (data ?? []) as Recipient[];
-    },
-  });
-
-  const history = useQuery({
-    queryKey: ["admin", "campaigns"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_campaigns");
-      if (error) throw error;
-      return (data ?? []) as Campaign[];
-    },
-  });
-
-  const create = useMutation({
-    mutationFn: async () => {
-      const recs = (recipients.data ?? []).map((r) => ({
-        store_id: r.store_id,
-        message: message.replace(/\{\{nome_loja\}\}/g, r.name).replace(/\{\{dias_restantes\}\}/g, String(r.trial_days_left)),
-      }));
-      const { data, error } = await supabase.rpc("admin_create_campaign", {
-        _segment: segment,
-        _message_template: message,
-        _recipients: recs,
-      });
-      if (error) throw error;
-      return { id: data as unknown as string, recipients: recs };
-    },
-    onSuccess: async (result) => {
-      const { data } = await supabase
-        .from("communications_recipients")
-        .select("id, store_id, rendered_message")
-        .eq("communication_id", result.id);
-      const enriched = (data ?? []).map((row) => {
-        const rec = (recipients.data ?? []).find((r) => r.store_id === row.store_id);
-        return { id: row.id, name: rec?.name ?? "Loja", whatsapp: rec?.whatsapp ?? "", text: row.rendered_message };
-      });
-      setCampaignId(result.id);
-      setSentRecipients(enriched);
-      qc.invalidateQueries({ queryKey: ["admin", "campaigns"] });
-      toast.success(`Campanha criada com ${enriched.length} destinatários`);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const recipients = useSegmentStores(segment);
+  const history = useCampaigns();
+  const sendMut = useSendCampaign();
+  const create = {
+    isPending: sendMut.isPending,
+    mutate: () =>
+      sendMut.mutate(
+        {
+          segment,
+          messageTemplate: message,
+          audience: recipients.data ?? [],
+        },
+        {
+          onSuccess: (result) => {
+            const enriched = result.recipients.map((row) => {
+              const rec = (recipients.data ?? []).find((r) => r.store_id === row.store_id);
+              return {
+                id: row.id,
+                name: rec?.name ?? "Loja",
+                whatsapp: rec?.whatsapp ?? "",
+                text: row.rendered_message,
+              };
+            });
+            setCampaignId(result.id);
+            setSentRecipients(enriched);
+            toast.success(`Campanha criada com ${enriched.length} destinatários`);
+          },
+          onError: (e: Error) => toast.error(e.message),
+        },
+      ),
+  };
 
   return (
     <AdminShell title="Campanhas WhatsApp">
@@ -119,7 +102,7 @@ function CampanhasPage() {
                   href={whatsappLink(r.whatsapp, r.text)}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={() => supabase.rpc("admin_mark_recipient_opened", { _recipient_id: r.id })}
+                  onClick={() => markRecipientOpened(r.id)}
                   className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border hover:bg-muted/40"
                 >
                   <div className="min-w-0">

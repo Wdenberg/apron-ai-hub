@@ -1,21 +1,10 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ImageIcon } from "lucide-react";
+import { useAssetUrl } from "@/hooks/useAssets";
+import { resolveAssetUrl } from "@/services/assetsService";
 
-const cache = new Map<string, string>();
-
-export async function resolveStoreAssetUrl(pathOrUrl: string | null | undefined): Promise<string | null> {
-  if (!pathOrUrl) return null;
-  if (pathOrUrl.startsWith("http")) return pathOrUrl;
-  if (cache.has(pathOrUrl)) return cache.get(pathOrUrl)!;
-  const { data } = await supabase.storage.from("store-assets").createSignedUrl(pathOrUrl, 60 * 60 * 24 * 7);
-  if (data?.signedUrl) {
-    cache.set(pathOrUrl, data.signedUrl);
-    return data.signedUrl;
-  }
-  return null;
-}
+// Re-export for legacy callers; delegates to the assets service.
+export const resolveStoreAssetUrl = resolveAssetUrl;
 
 export function StoreImage({
   path,
@@ -28,12 +17,7 @@ export function StoreImage({
   className?: string;
   fallbackClassName?: string;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    resolveStoreAssetUrl(path).then((u) => { if (!cancelled) setUrl(u); });
-    return () => { cancelled = true; };
-  }, [path]);
+  const url = useAssetUrl(path);
   if (!url) {
     return (
       <div className={cn("flex items-center justify-center bg-muted text-muted-foreground", fallbackClassName ?? className)}>

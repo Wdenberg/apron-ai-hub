@@ -1,60 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useAdminTeam,
+  useInviteAdmin,
+  useCreateAdmin,
+} from "@/hooks/admin/useAdminTeam";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useState } from "react";
 import { ShieldCheck, Mail, UserPlus } from "lucide-react";
-import { adminCreateAdmin } from "@/lib/admin-team.functions";
 
 export const Route = createFileRoute("/admin/equipe")({
   head: () => ({ meta: [{ title: "Equipe — Admin ProntoPede" }] }),
   component: EquipePage,
 });
 
-type Row = { user_id: string | null; email: string; full_name: string | null; invited: boolean };
-
 function EquipePage() {
-  const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [createForm, setCreateForm] = useState({ email: "", password: "", full_name: "" });
-  const createAdminFn = useServerFn(adminCreateAdmin);
 
-  const team = useQuery({
-    queryKey: ["admin", "team"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_team");
-      if (error) throw error;
-      return (data ?? []) as Row[];
-    },
-  });
+  const team = useAdminTeam();
+  const inviteBase = useInviteAdmin();
+  const invite = {
+    isPending: inviteBase.isPending,
+    mutate: () =>
+      inviteBase.mutate(email, {
+        onSuccess: (data) => {
+          toast.success(data.status === "promoted" ? "Usuário promovido a admin" : "Convite pendente registrado");
+          setEmail("");
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
-  const invite = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.rpc("admin_invite", { _email: email });
-      if (error) throw error;
-      return data as unknown as { status: string };
-    },
-    onSuccess: (data) => {
-      toast.success(data.status === "promoted" ? "Usuário promovido a admin" : "Convite pendente registrado");
-      setEmail("");
-      qc.invalidateQueries({ queryKey: ["admin", "team"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const createAdmin = useMutation({
-    mutationFn: async () => createAdminFn({ data: createForm }),
-    onSuccess: (res) => {
-      toast.success(res.created ? "Admin criado — já pode entrar com e-mail e senha" : "Usuário existente promovido a admin");
-      setCreateForm({ email: "", password: "", full_name: "" });
-      qc.invalidateQueries({ queryKey: ["admin", "team"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const createAdminMut = useCreateAdmin();
+  const createAdmin = {
+    isPending: createAdminMut.isPending,
+    mutate: () =>
+      createAdminMut.mutate(createForm, {
+        onSuccess: (res) => {
+          toast.success(res.created ? "Admin criado — já pode entrar com e-mail e senha" : "Usuário existente promovido a admin");
+          setCreateForm({ email: "", password: "", full_name: "" });
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   return (
     <AdminShell title="Equipe de admins">

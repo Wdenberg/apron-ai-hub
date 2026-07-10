@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { getMyStoreExists, createStore } from "@/services/storeService";
+import { getCurrentUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +34,7 @@ function Onboarding() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("stores").select("id").maybeSingle();
+      const data = await getMyStoreExists();
       if (data) navigate({ to: "/dashboard", replace: true });
     })();
   }, [navigate]);
@@ -58,21 +59,25 @@ function Onboarding() {
       return;
     }
     setLoading(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setLoading(false); return; }
-    const { error } = await supabase.from("stores").insert({
-      owner_id: user.user.id,
-      name: parsed.data.name,
-      slug: parsed.data.slug.toLowerCase(),
-      whatsapp: parsed.data.whatsapp,
-      city: parsed.data.city || null,
-      state: parsed.data.state || null,
-      description: parsed.data.description || null,
-    });
-    setLoading(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Loja criada! Vamos começar.");
-    navigate({ to: "/dashboard", replace: true });
+    const user = await getCurrentUser();
+    if (!user) { setLoading(false); return; }
+    try {
+      await createStore({
+        owner_id: user.id,
+        name: parsed.data.name,
+        slug: parsed.data.slug.toLowerCase(),
+        whatsapp: parsed.data.whatsapp,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        description: parsed.data.description || null,
+      });
+      toast.success("Loja criada! Vamos começar.");
+      navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar loja");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useSessionUser } from "@/hooks/useAuth";
+import { useProfileBasic, useSaveMyPhone } from "@/hooks/useProfile";
+import { useMyOrders } from "@/hooks/useMyOrders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,49 +16,20 @@ export const Route = createFileRoute("/minhas-compras")({
   component: MyOrders,
 });
 
-type Row = { id: string; order_number: number; store_id: string; store_name: string; store_slug: string; status: string; total: number; created_at: string };
-
 function MyOrders() {
   const navigate = useNavigate();
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => (await supabase.auth.getUser()).data.user,
-  });
-
-  const profile = useQuery({
-    queryKey: ["profile", session.data?.id],
-    enabled: !!session.data,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, whatsapp")
-        .eq("id", session.data!.id)
-        .maybeSingle();
-      return data;
-    },
-  });
-
-  const orders = useQuery({
-    queryKey: ["my-orders", session.data?.id],
-    enabled: !!session.data && !!profile.data?.whatsapp,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("my_orders");
-      if (error) throw error;
-      return (data ?? []) as Row[];
-    },
-  });
-
-  const savePhone = useMutation({
-    mutationFn: async (whatsapp: string) => {
-      const { data: existing } = await supabase
-        .from("profiles").select("id").eq("whatsapp", whatsapp).neq("id", session.data!.id).maybeSingle();
-      if (existing) throw new Error("Telefone já cadastrado em outra conta.");
-      const { error } = await supabase.from("profiles").update({ whatsapp }).eq("id", session.data!.id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Telefone salvo!"); profile.refetch(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const session = useSessionUser();
+  const profile = useProfileBasic(session.data?.id);
+  const orders = useMyOrders(!!session.data && !!profile.data?.whatsapp, session.data?.id);
+  const savePhoneMut = useSaveMyPhone(session.data?.id);
+  const savePhone = {
+    isPending: savePhoneMut.isPending,
+    mutate: (whatsapp: string) =>
+      savePhoneMut.mutate(whatsapp, {
+        onSuccess: () => { toast.success("Telefone salvo!"); profile.refetch(); },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   const [phoneInput, setPhoneInput] = useState("");
 
