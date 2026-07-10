@@ -366,9 +366,9 @@ function OrdersPage() {
                     return (
                       <div
                         key={o.id}
-                        className={`relative rounded-xl bg-card border ${col.border} border-l-4 ${col.accent} p-3 shadow-sm ${
+                        className={`relative rounded-xl bg-card border ${col.border} border-l-4 ${col.accent} p-3 shadow-sm transition-shadow ${
                           isNew
-                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse-slow"
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg"
                             : ""
                         }`}
                       >
