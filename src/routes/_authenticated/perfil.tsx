@@ -5,6 +5,7 @@ import { StoreImage } from "@/components/StoreImage";
 import { useAssetUrl } from "@/hooks/useAssets";
 import { useAuthUser, useUpdateEmail, useUpdatePassword } from "@/hooks/useAuth";
 import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/useProfile";
+import { formatPhoneBR, formatProperName } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -141,7 +142,7 @@ function PerfilPage() {
                     />
                   ) : (
                     <div className="h-20 w-20 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-semibold ring-2 ring-border">
-                      {(profile?.full_name ?? user?.email ?? "?").charAt(0).toUpperCase()}
+                      {(formatProperName(profile?.full_name) || user?.email || "?").charAt(0).toUpperCase()}
                     </div>
                   )}
                   <button
@@ -156,7 +157,7 @@ function PerfilPage() {
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
                 </div>
                 <div className="min-w-0">
-                  <div className="font-semibold truncate">{profile?.full_name ?? "Sem nome"}</div>
+                  <div className="font-semibold truncate">{formatProperName(profile?.full_name) || "Sem nome"}</div>
                   <div className="text-sm text-muted-foreground truncate">{user?.email}</div>
                 </div>
               </div>
@@ -164,11 +165,11 @@ function PerfilPage() {
               <form onSubmit={saveProfile} className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="full_name">Nome completo</Label>
-                  <Input id="full_name" name="full_name" defaultValue={profile?.full_name ?? ""} maxLength={80} required />
+                  <Input id="full_name" name="full_name" defaultValue={formatProperName(profile?.full_name)} maxLength={80} required />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="whatsapp">Telefone / WhatsApp</Label>
-                  <Input id="whatsapp" name="whatsapp" defaultValue={profile?.whatsapp ?? ""} placeholder="(21) 99999-0000" maxLength={20} required />
+                  <Input id="whatsapp" name="whatsapp" defaultValue={formatPhoneBR(profile?.whatsapp)} placeholder="(21) 99999-0000" maxLength={20} required />
                 </div>
                 <div className="sm:col-span-2 flex justify-end">
                   <Button type="submit" disabled={savingProfile}>
