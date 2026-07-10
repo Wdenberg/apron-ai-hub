@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
+import { useMyStoreShell } from "@/hooks/useStore";
+import {
+  useCustomers,
+  useCustomerOrders,
+  useUpdateCustomer,
+  useDeleteCustomer,
+} from "@/hooks/useCustomers";
 import { formatBRL } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
@@ -30,24 +35,7 @@ export const Route = createFileRoute("/_authenticated/clientes")({
   component: CustomersPage,
 });
 
-type Customer = {
-  id: string;
-  name: string;
-  whatsapp: string;
-  total_orders: number;
-  last_order_at: string | null;
-  created_at: string;
-  total_spent: number;
-};
-
-type CustomerOrder = {
-  id: string;
-  order_number: number;
-  status: string;
-  total: number;
-  created_at: string;
-  notes: string | null;
-};
+import type { Customer } from "@/services/customersService";
 
 function formatPhone(digits: string): string {
   const s = digits.replace(/^55/, "");
@@ -61,55 +49,11 @@ function CustomersPage() {
   const [openCustomer, setOpenCustomer] = useState<Customer | null>(null);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState<Customer | null>(null);
-  const qc = useQueryClient();
 
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () => (await supabase.from("stores").select("id, name").maybeSingle()).data,
-  });
-
-  const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["customers", store?.id],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_store_customers" as never, {
-        _store_id: store!.id,
-      } as never);
-      if (error) throw error;
-      return (data ?? []) as Customer[];
-    },
-  });
-
-  const saveCustomer = useMutation({
-    mutationFn: async (payload: { id: string; name: string; whatsapp: string }) => {
-      const wa = normalizeBRPhone(payload.whatsapp).replace(/^55/, "");
-      if (wa.length < 10) throw new Error("WhatsApp inválido");
-      const { error } = await supabase
-        .from("customers")
-        .update({ name: payload.name.trim(), whatsapp: wa })
-        .eq("id", payload.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Cliente atualizado");
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      setEditing(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deleteCustomer = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("customers").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Cliente excluído. Os pedidos anteriores permanecem no histórico.");
-      qc.invalidateQueries({ queryKey: ["customers"] });
-      setDeleting(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const { data: store } = useMyStoreShell();
+  const { data: customers = [], isLoading } = useCustomers(store?.id);
+  const saveCustomerMut = useUpdateCustomer();
+  const deleteCustomerMut = useDeleteCustomer();
 
   const filtered = customers.filter((c) => {
     if (!query) return true;
@@ -234,8 +178,18 @@ function CustomersPage() {
       <EditCustomerDialog
         customer={editing}
         onClose={() => setEditing(null)}
-        onSave={(payload) => saveCustomer.mutate(payload)}
-        pending={saveCustomer.isPending}
+        onSave={(payload) => {
+          const wa = normalizeBRPhone(payload.whatsapp).replace(/^55/, "");
+          if (wa.length < 10) { toast.error("WhatsApp inválido"); return; }
+          saveCustomerMut.mutate(
+            { id: payload.id, name: payload.name.trim(), whatsapp: wa },
+            {
+              onSuccess: () => { toast.success("Cliente atualizado"); setEditing(null); },
+              onError: (e: Error) => toast.error(e.message),
+            },
+          );
+        }}
+        pending={saveCustomerMut.isPending}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
@@ -256,7 +210,13 @@ function CustomersPage() {
             <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleting && deleteCustomer.mutate(deleting.id)}
+              onClick={() => deleting && deleteCustomerMut.mutate(deleting.id, {
+                onSuccess: () => {
+                  toast.success("Cliente excluído. Os pedidos anteriores permanecem no histórico.");
+                  setDeleting(null);
+                },
+                onError: (e: Error) => toast.error(e.message),
+              })}
             >
               Excluir
             </AlertDialogAction>
