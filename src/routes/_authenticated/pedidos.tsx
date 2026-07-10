@@ -54,12 +54,48 @@ export const Route = createFileRoute("/_authenticated/pedidos")({
   component: OrdersPage,
 });
 
-const COLUMNS: { key: Status; tint: string }[] = [
-  { key: "pendente", tint: "bg-primary/10 text-primary" },
-  { key: "preparo", tint: "bg-warning/15 text-warning-foreground" },
-  { key: "pronto", tint: "bg-accent/15 text-accent-foreground" },
-  { key: "saiu_entrega", tint: "bg-secondary text-secondary-foreground" },
-  { key: "entregue", tint: "bg-success/15 text-success" },
+const COLUMNS: {
+  key: Status;
+  tint: string;
+  accent: string;
+  border: string;
+  dot: string;
+}[] = [
+  {
+    key: "pendente",
+    tint: "bg-yellow-100 text-yellow-800",
+    accent: "border-l-yellow-500",
+    border: "border-yellow-200",
+    dot: "bg-yellow-500",
+  },
+  {
+    key: "preparo",
+    tint: "bg-orange-100 text-orange-800",
+    accent: "border-l-orange-500",
+    border: "border-orange-200",
+    dot: "bg-orange-500",
+  },
+  {
+    key: "pronto",
+    tint: "bg-blue-100 text-blue-800",
+    accent: "border-l-blue-500",
+    border: "border-blue-200",
+    dot: "bg-blue-500",
+  },
+  {
+    key: "saiu_entrega",
+    tint: "bg-purple-100 text-purple-800",
+    accent: "border-l-purple-500",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+  },
+  {
+    key: "entregue",
+    tint: "bg-green-100 text-green-800",
+    accent: "border-l-green-500",
+    border: "border-green-200",
+    dot: "bg-green-500",
+  },
 ];
 
 const STATUS_FLOW: Status[] = ["pendente", "preparo", "pronto", "saiu_entrega", "entregue"];
@@ -221,7 +257,8 @@ function OrdersPage() {
                 className="rounded-2xl bg-muted/40 border border-border p-3 flex flex-col min-h-[300px]"
               >
                 <div className="flex items-center justify-between px-2 py-2">
-                  <div className="font-semibold text-sm">
+                  <div className="flex items-center gap-2 font-semibold text-sm">
+                    <span className={`h-2.5 w-2.5 rounded-full ${col.dot}`} />
                     {ORDER_STATUS_LABELS[col.key]}
                   </div>
                   <span
@@ -237,28 +274,42 @@ function OrdersPage() {
                     return (
                       <div
                         key={o.id}
-                        className="rounded-xl bg-card border border-border p-3 shadow-sm"
+                        className={`rounded-xl bg-card border ${col.border} border-l-4 ${col.accent} p-3 shadow-sm`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Checkbox
-                              checked={selectedIds.has(o.id)}
-                              onCheckedChange={() => toggleSelected(o.id)}
-                              aria-label="Selecionar para imprimir"
-                            />
-                            <div className="font-semibold text-sm truncate">
-                              #{o.order_number} · {formatProperName(o.customer_name)}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={selectedIds.has(o.id)}
+                            onCheckedChange={() => toggleSelected(o.id)}
+                            aria-label="Selecionar para imprimir"
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="text-xl font-bold leading-none">
+                              #{o.order_number}
                             </div>
+                            <div className="font-semibold text-sm truncate">
+                              {formatProperName(o.customer_name)}
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Valor: </span>
+                              <span className="font-semibold text-primary">
+                                {formatBRL(o.total)}
+                              </span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Hora: </span>
+                              {new Date(o.created_at).toLocaleTimeString("pt-BR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                            {o.notes && (
+                              <div className="text-sm whitespace-pre-line">
+                                <span className="text-muted-foreground">Obs: </span>
+                                {o.notes}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-primary font-bold text-sm">
-                            {formatBRL(o.total)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {new Date(o.created_at).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
                         </div>
                         {o.status === "entregue" && (
                           <div
@@ -271,11 +322,6 @@ function OrdersPage() {
                             }`}
                           >
                             Pagamento: {PAYMENT_STATUS_LABELS[o.payment_status]}
-                          </div>
-                        )}
-                        {o.notes && (
-                          <div className="text-xs mt-2 text-muted-foreground whitespace-pre-line">
-                            {o.notes}
                           </div>
                         )}
                         <div className="flex flex-wrap gap-1 mt-3">
