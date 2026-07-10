@@ -22,6 +22,7 @@ import { Route as AdminLojistasRouteImport } from './routes/admin/lojistas'
 import { Route as AdminEquipeRouteImport } from './routes/admin/equipe'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as AdminCampanhasRouteImport } from './routes/admin/campanhas'
+import { Route as AuthenticatedVendasRouteImport } from './routes/_authenticated/vendas'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPedidosRouteImport } from './routes/_authenticated/pedidos'
@@ -96,6 +97,11 @@ const AdminCampanhasRoute = AdminCampanhasRouteImport.update({
   path: '/campanhas',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AuthenticatedVendasRoute = AuthenticatedVendasRouteImport.update({
+  id: '/vendas',
+  path: '/vendas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedProdutosRoute = AuthenticatedProdutosRouteImport.update({
   id: '/produtos',
   path: '/produtos',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/equipe': typeof AdminEquipeRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/pedidos': typeof AuthenticatedPedidosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/produtos': typeof AuthenticatedProdutosRoute
+  '/vendas': typeof AuthenticatedVendasRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/equipe': typeof AdminEquipeRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated/pedidos': typeof AuthenticatedPedidosRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRoute
+  '/_authenticated/vendas': typeof AuthenticatedVendasRoute
   '/admin/campanhas': typeof AdminCampanhasRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/equipe': typeof AdminEquipeRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfil'
     | '/produtos'
+    | '/vendas'
     | '/admin/campanhas'
     | '/admin/dashboard'
     | '/admin/equipe'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfil'
     | '/produtos'
+    | '/vendas'
     | '/admin/campanhas'
     | '/admin/dashboard'
     | '/admin/equipe'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pedidos'
     | '/_authenticated/perfil'
     | '/_authenticated/produtos'
+    | '/_authenticated/vendas'
     | '/admin/campanhas'
     | '/admin/dashboard'
     | '/admin/equipe'
@@ -388,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCampanhasRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_authenticated/vendas': {
+      id: '/_authenticated/vendas'
+      path: '/vendas'
+      fullPath: '/vendas'
+      preLoaderRoute: typeof AuthenticatedVendasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/produtos': {
       id: '/_authenticated/produtos'
       path: '/produtos'
@@ -463,6 +482,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPedidosRoute: typeof AuthenticatedPedidosRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedProdutosRoute: typeof AuthenticatedProdutosRoute
+  AuthenticatedVendasRoute: typeof AuthenticatedVendasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -474,6 +494,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPedidosRoute: AuthenticatedPedidosRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedProdutosRoute: AuthenticatedProdutosRoute,
+  AuthenticatedVendasRoute: AuthenticatedVendasRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
