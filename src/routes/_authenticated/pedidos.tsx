@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { MessageCircle, ClipboardList, XCircle, Pencil } from "lucide-react";
+import { MessageCircle, ClipboardList, XCircle, Pencil, Printer } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Status = Database["public"]["Enums"]["order_status"];
@@ -75,6 +75,10 @@ function OrdersPage() {
   const [editing, setEditing] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState<Order | null>(null);
   const [payAsking, setPayAsking] = useState<Order | null>(null);
+  const [printData, setPrintData] = useState<{
+    order: Order;
+    items: { name: string; quantity: number }[];
+  } | null>(null);
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -124,6 +128,26 @@ function OrdersPage() {
       return;
     }
     updateOrder.mutate({ id: o.id, status: next });
+  }
+
+  async function handlePrint(o: Order) {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("quantity, products(name)")
+      .eq("order_id", o.id);
+    if (error) {
+      toast.error("Erro ao carregar itens do pedido");
+      return;
+    }
+    const items = (data ?? []).map((r: { quantity: number; products: { name: string } | null }) => ({
+      name: r.products?.name ?? "Item",
+      quantity: r.quantity,
+    }));
+    setPrintData({ order: o, items });
+    // Wait for React to render the hidden receipt before opening the print dialog.
+    await new Promise((r) => setTimeout(r, 50));
+    window.print();
+    setTimeout(() => setPrintData(null), 300);
   }
 
   return (
@@ -231,6 +255,15 @@ function OrdersPage() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handlePrint(o)}
+                            title="Imprimir comanda"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="h-7 w-7 p-0 text-destructive"
                             onClick={() => setCancelling(o)}
                             title="Cancelar"
@@ -319,7 +352,73 @@ function OrdersPage() {
           );
         }}
       />
+
+      {printData && (
+        <PrintReceipt
+          storeName={store?.name ?? ""}
+          order={printData.order}
+          items={printData.items}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function PrintReceipt({
+  storeName,
+  order,
+  items,
+}: {
+  storeName: string;
+  order: Order;
+  items: { name: string; quantity: number }[];
+}) {
+  const dt = new Date(order.created_at).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return (
+    <div className="print-receipt">
+      <h1>{storeName || "Comanda"}</h1>
+      <div className="row muted">
+        <span>Pedido #{order.order_number}</span>
+        <span>{dt}</span>
+      </div>
+      <hr />
+      <div>
+        <strong>Cliente:</strong> {order.customer_name}
+      </div>
+      {order.customer_whatsapp && (
+        <div>
+          <strong>Tel:</strong> {order.customer_whatsapp}
+        </div>
+      )}
+      <hr />
+      <div>
+        {items.map((it, i) => (
+          <div key={i} className="row">
+            <span>
+              {it.quantity}x {it.name}
+            </span>
+          </div>
+        ))}
+      </div>
+      {order.notes && (
+        <>
+          <hr />
+          <div>
+            <strong>Obs:</strong> {order.notes}
+          </div>
+        </>
+      )}
+      <hr />
+      <div className="muted" style={{ textAlign: "center" }}>
+        * * *
+      </div>
+    </div>
   );
 }
 
