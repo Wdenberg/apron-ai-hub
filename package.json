@@ -9,7 +9,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "python3 tests/e2e/loja_pedido_minhas_compras.py"
   },
   "dependencies": {
     "@fontsource/plus-jakarta-sans": "^5.2.8",
