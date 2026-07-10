@@ -15,11 +15,11 @@ import {
   Receipt,
   UserCircle,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useMyStoreShell } from "@/hooks/useStore";
+import { useSignOut } from "@/hooks/useAuth";
 import { ShieldCheck } from "lucide-react";
 
 const NAV = [
@@ -35,31 +35,13 @@ const NAV = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const qc = useQueryClient();
   const isAdmin = useIsAdmin();
-
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("stores")
-        .select("id, name, slug, is_open, subscription_status, trial_ends_at")
-        .maybeSingle();
-      return data;
-    },
-  });
+  const { data: store } = useMyStoreShell();
+  const signOut = useSignOut();
 
   useEffect(() => setOpen(false), [pathname]);
-
-  async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut({ scope: "global" });
-    navigate({ to: "/auth", replace: true });
-  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
