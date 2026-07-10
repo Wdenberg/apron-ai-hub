@@ -314,12 +314,7 @@ function VendasPage() {
         onClose={() => setOpen(false)}
         storeId={store?.id ?? null}
         products={products ?? []}
-        onCreated={() => {
-          qc.invalidateQueries({ queryKey: ["quick-sales"] });
-          qc.invalidateQueries({ queryKey: ["products-active"] });
-          qc.invalidateQueries({ queryKey: ["products"] });
-          setOpen(false);
-        }}
+        onCreated={() => setOpen(false)}
       />
     </AppShell>
   );
@@ -360,10 +355,13 @@ function QuickSaleDialog({
     setNotes("");
   }
 
-  const createSale = useMutation({
-    mutationFn: async () => {
-      if (!storeId) throw new Error("Loja não carregada");
-      const parsed = schema.parse({
+  const createSale = useCreateQuickSale();
+
+  function submitSale() {
+    if (!storeId) { toast.error("Loja não carregada"); return; }
+    let parsed: z.infer<typeof schema>;
+    try {
+      parsed = schema.parse({
         customer_name: customerName,
         customer_whatsapp: customerWhatsapp,
         product_id: productId,
@@ -371,33 +369,35 @@ function QuickSaleDialog({
         payment,
         notes,
       });
-      const { data, error } = await supabase.rpc("create_quick_sale", {
-        _store_id: storeId,
-        _customer_name: parsed.customer_name,
-        _customer_whatsapp: parsed.customer_whatsapp,
-        _product_id: parsed.product_id,
-        _quantity: parsed.quantity,
-        _payment: parsed.payment,
-        _notes: parsed.notes || undefined,
-      });
-      if (error) throw error;
-      return data?.[0];
-    },
-    onSuccess: (row) => {
-      toast.success(
-        row
-          ? `Venda #${row.order_number} registrada • ${formatBRL(row.total)}`
-          : "Venda registrada",
-      );
-      reset();
-      onCreated();
-    },
-    onError: (e: Error) => {
-      const zerr = e as unknown as { issues?: { message: string }[] };
-      const msg = zerr.issues?.[0]?.message ?? e.message;
-      toast.error(msg);
-    },
-  });
+    } catch (e) {
+      const zerr = e as { issues?: { message: string }[] };
+      toast.error(zerr.issues?.[0]?.message ?? "Dados inválidos");
+      return;
+    }
+    createSale.mutate(
+      {
+        storeId,
+        customerName: parsed.customer_name,
+        customerWhatsapp: parsed.customer_whatsapp,
+        productId: parsed.product_id,
+        quantity: parsed.quantity,
+        payment: parsed.payment,
+        notes: parsed.notes || undefined,
+      },
+      {
+        onSuccess: (row) => {
+          toast.success(
+            row
+              ? `Venda #${row.order_number} registrada • ${formatBRL(row.total)}`
+              : "Venda registrada",
+          );
+          reset();
+          onCreated();
+        },
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
+  }
 
   const canSubmit =
     !!storeId &&
