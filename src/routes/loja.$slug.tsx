@@ -117,19 +117,6 @@ function PublicStore() {
     toast.success(`Pedido #${order.order_number} enviado!`);
   }
 
-  const _originalSubmit = {
-    // preserved for structural compatibility
-  };
-
-  // legacy inline result handler (unused; kept for parity)
-  const _unused = useMutation({
-    mutationFn: async () => undefined,
-    onSuccess: (order) => {
-      void order;
-    },
-    onError: (e: Error) => void e,
-  });
-
   function checkout(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
