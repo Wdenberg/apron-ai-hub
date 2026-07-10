@@ -352,7 +352,73 @@ function OrdersPage() {
           );
         }}
       />
+
+      {printData && (
+        <PrintReceipt
+          storeName={store?.name ?? ""}
+          order={printData.order}
+          items={printData.items}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function PrintReceipt({
+  storeName,
+  order,
+  items,
+}: {
+  storeName: string;
+  order: Order;
+  items: { name: string; quantity: number }[];
+}) {
+  const dt = new Date(order.created_at).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return (
+    <div className="print-receipt">
+      <h1>{storeName || "Comanda"}</h1>
+      <div className="row muted">
+        <span>Pedido #{order.order_number}</span>
+        <span>{dt}</span>
+      </div>
+      <hr />
+      <div>
+        <strong>Cliente:</strong> {order.customer_name}
+      </div>
+      {order.customer_whatsapp && (
+        <div>
+          <strong>Tel:</strong> {order.customer_whatsapp}
+        </div>
+      )}
+      <hr />
+      <div>
+        {items.map((it, i) => (
+          <div key={i} className="row">
+            <span>
+              {it.quantity}x {it.name}
+            </span>
+          </div>
+        ))}
+      </div>
+      {order.notes && (
+        <>
+          <hr />
+          <div>
+            <strong>Obs:</strong> {order.notes}
+          </div>
+        </>
+      )}
+      <hr />
+      <div className="muted" style={{ textAlign: "center" }}>
+        * * *
+      </div>
+    </div>
   );
 }
 
