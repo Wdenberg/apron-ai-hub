@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { z } from "zod";
+import { formatPhoneBR } from "@/lib/formatters";
 import { AppShell } from "@/components/AppShell";
 import { StoreImage } from "@/components/StoreImage";
 import { useQueryClient } from "@tanstack/react-query";
