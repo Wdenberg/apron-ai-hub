@@ -9,6 +9,7 @@ import {
   updateProductStock,
   deleteProducts,
   type ProductWriteRow,
+  type DeleteTarget,
 } from "@/services/productsService";
 
 export function useProducts(storeId: string | null | undefined) {
@@ -64,7 +65,7 @@ export function useUpdateProductStock() {
 export function useDeleteProducts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => deleteProducts(ids),
+    mutationFn: (targets: DeleteTarget[]) => deleteProducts(targets),
     onSuccess: () => invalidate.products(qc),
   });
 }
