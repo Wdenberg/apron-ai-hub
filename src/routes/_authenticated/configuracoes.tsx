@@ -231,21 +231,25 @@ function CreateStoreForm({ onCreated }: { onCreated: () => void }) {
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     setLoading(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setLoading(false); return; }
-    const { error } = await supabase.from("stores").insert({
-      owner_id: user.user.id,
-      name: parsed.data.name,
-      slug: parsed.data.slug.toLowerCase(),
-      whatsapp: parsed.data.whatsapp,
-      city: parsed.data.city || null,
-      state: parsed.data.state || null,
-      description: parsed.data.description || null,
-    });
-    setLoading(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Loja criada!");
-    onCreated();
+    try {
+      const user = await getCurrentUser();
+      if (!user) { setLoading(false); return; }
+      await createStoreSvc({
+        owner_id: user.id,
+        name: parsed.data.name,
+        slug: parsed.data.slug.toLowerCase(),
+        whatsapp: parsed.data.whatsapp,
+        city: parsed.data.city || null,
+        state: parsed.data.state || null,
+        description: parsed.data.description || null,
+      });
+      toast.success("Loja criada!");
+      onCreated();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao criar loja");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
