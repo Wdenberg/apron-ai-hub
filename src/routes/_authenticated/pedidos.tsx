@@ -42,7 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { MessageCircle, ClipboardList, XCircle, Pencil, Printer } from "lucide-react";
+import { MessageCircle, ClipboardList, XCircle, Pencil, Printer, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type {
   OrderStatus as Status,
@@ -63,42 +63,45 @@ const COLUMNS: {
 }[] = [
   {
     key: "pendente",
-    tint: "bg-yellow-100 text-yellow-800",
+    tint: "bg-yellow-100 text-yellow-900 dark:bg-yellow-500/20 dark:text-yellow-100",
     accent: "border-l-yellow-500",
-    border: "border-yellow-200",
+    border: "border-yellow-200 dark:border-yellow-500/30",
     dot: "bg-yellow-500",
   },
   {
     key: "preparo",
-    tint: "bg-orange-100 text-orange-800",
+    tint: "bg-orange-100 text-orange-900 dark:bg-orange-500/20 dark:text-orange-100",
     accent: "border-l-orange-500",
-    border: "border-orange-200",
+    border: "border-orange-200 dark:border-orange-500/30",
     dot: "bg-orange-500",
   },
   {
     key: "pronto",
-    tint: "bg-blue-100 text-blue-800",
+    tint: "bg-blue-100 text-blue-900 dark:bg-blue-500/20 dark:text-blue-100",
     accent: "border-l-blue-500",
-    border: "border-blue-200",
+    border: "border-blue-200 dark:border-blue-500/30",
     dot: "bg-blue-500",
   },
   {
     key: "saiu_entrega",
-    tint: "bg-purple-100 text-purple-800",
+    tint: "bg-purple-100 text-purple-900 dark:bg-purple-500/20 dark:text-purple-100",
     accent: "border-l-purple-500",
-    border: "border-purple-200",
+    border: "border-purple-200 dark:border-purple-500/30",
     dot: "bg-purple-500",
   },
   {
     key: "entregue",
-    tint: "bg-green-100 text-green-800",
+    tint: "bg-green-100 text-green-900 dark:bg-green-500/20 dark:text-green-100",
     accent: "border-l-green-500",
-    border: "border-green-200",
+    border: "border-green-200 dark:border-green-500/30",
     dot: "bg-green-500",
   },
 ];
 
 const STATUS_FLOW: Status[] = ["pendente", "preparo", "pronto", "saiu_entrega", "entregue"];
+
+const ALL_STATUSES: Status[] = STATUS_FLOW;
+const NEW_ORDER_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 
 type Order = {
   id: string;
@@ -121,6 +124,51 @@ function OrdersPage() {
   >(null);
   const [printWidth, setPrintWidth] = useState<"58" | "80">("80");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<Set<Status>>(
+    () => new Set(ALL_STATUSES),
+  );
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined"
+      ? window.localStorage.getItem("pp_orders_status_filter")
+      : null;
+    if (!saved) return;
+    try {
+      const arr = JSON.parse(saved) as Status[];
+      const valid = arr.filter((s) => ALL_STATUSES.includes(s));
+      if (valid.length) setStatusFilter(new Set(valid));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "pp_orders_status_filter",
+        JSON.stringify(Array.from(statusFilter)),
+      );
+    }
+  }, [statusFilter]);
+
+  // Ticker to keep the "novo" highlight fresh as time passes.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  function toggleStatusFilter(s: Status) {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      if (next.size === 0) return new Set(ALL_STATUSES); // never empty
+      return next;
+    });
+  }
+  const allSelected = statusFilter.size === ALL_STATUSES.length;
+
+  const visibleColumns = COLUMNS.filter((c) => statusFilter.has(c.key));
 
   useEffect(() => {
     const saved = typeof window !== "undefined"
@@ -237,6 +285,47 @@ function OrdersPage() {
         </div>
       </div>
 
+      <div
+        role="group"
+        aria-label="Filtrar por status"
+        className="mb-4 flex flex-wrap items-center gap-2"
+      >
+        <span className="text-xs font-medium text-muted-foreground mr-1">
+          Filtrar:
+        </span>
+        <button
+          type="button"
+          onClick={() => setStatusFilter(new Set(ALL_STATUSES))}
+          aria-pressed={allSelected}
+          className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+            allSelected
+              ? "bg-foreground text-background border-foreground"
+              : "bg-background text-foreground border-border hover:bg-muted"
+          }`}
+        >
+          Todos
+        </button>
+        {COLUMNS.map((col) => {
+          const active = statusFilter.has(col.key) && !allSelected;
+          return (
+            <button
+              key={col.key}
+              type="button"
+              onClick={() => toggleStatusFilter(col.key)}
+              aria-pressed={statusFilter.has(col.key)}
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                active
+                  ? `${col.tint} border-transparent`
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${col.dot}`} aria-hidden />
+              {ORDER_STATUS_LABELS[col.key]}
+            </button>
+          );
+        })}
+      </div>
+
       {!orders?.length ? (
         <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center">
           <div className="mx-auto h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
@@ -249,7 +338,7 @@ function OrdersPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {COLUMNS.map((col) => {
+          {visibleColumns.map((col) => {
             const items = orders.filter((o) => o.status === col.key);
             return (
               <div
@@ -271,11 +360,27 @@ function OrdersPage() {
                   {items.map((o) => {
                     const i = STATUS_FLOW.indexOf(o.status);
                     const canAdvance = i >= 0 && i < STATUS_FLOW.length - 1;
+                    const isNew =
+                      o.status === "pendente" &&
+                      now - new Date(o.created_at).getTime() < NEW_ORDER_WINDOW_MS;
                     return (
                       <div
                         key={o.id}
-                        className={`rounded-xl bg-card border ${col.border} border-l-4 ${col.accent} p-3 shadow-sm`}
+                        className={`relative rounded-xl bg-card border ${col.border} border-l-4 ${col.accent} p-3 shadow-sm transition-shadow ${
+                          isNew
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg"
+                            : ""
+                        }`}
                       >
+                        {isNew && (
+                          <span
+                            className="absolute -top-2 -right-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow"
+                            aria-label="Pedido recém-chegado"
+                          >
+                            <Sparkles className="h-3 w-3" aria-hidden />
+                            Novo
+                          </span>
+                        )}
                         <div className="flex items-start gap-2">
                           <Checkbox
                             checked={selectedIds.has(o.id)}
