@@ -133,7 +133,7 @@ function SettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="whatsapp">WhatsApp</Label>
-              <Input id="whatsapp" name="whatsapp" defaultValue={store.whatsapp} required maxLength={20} />
+              <Input id="whatsapp" name="whatsapp" defaultValue={formatPhoneBR(store.whatsapp)} required maxLength={20} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2 space-y-1.5">
