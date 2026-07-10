@@ -529,7 +529,7 @@ function QuickSaleDialog({
             Cancelar
           </Button>
           <Button
-            onClick={() => createSale.mutate()}
+            onClick={submitSale}
             disabled={
               !canSubmit ||
               (selectedProduct ? quantity > selectedProduct.stock : false)
