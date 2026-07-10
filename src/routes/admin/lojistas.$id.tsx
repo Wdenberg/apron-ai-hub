@@ -1,6 +1,13 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useAdminStoreDetail,
+  useSetSubscriptionStatusDetail,
+  useExtendTrial,
+  useAddAdminNote,
+  useRegisterChurn,
+} from "@/hooks/admin/useAdminStores";
+import type { AdminStoreDetail as Detail } from "@/services/admin/adminStoresService";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,21 +24,6 @@ export const Route = createFileRoute("/admin/lojistas/$id")({
   component: LojistaDetail,
 });
 
-type Detail = {
-  store: {
-    id: string; name: string; slug: string; description: string | null;
-    whatsapp: string; city: string | null; state: string | null; address: string | null;
-    subscription_status: string; trial_ends_at: string; last_login_at: string | null;
-    is_open: boolean; created_at: string; health: "green" | "yellow" | "red";
-    owner_email: string | null;
-  };
-  total_orders: number;
-  total_revenue_cents: number;
-  churn_reason: { reason: string; note: string | null; created_at: string } | null;
-  actions: { action: string; payload: Record<string, unknown>; created_at: string }[];
-  notes: { note: string; created_at: string }[];
-};
-
 function LojistaDetail() {
   const { id } = useParams({ from: "/admin/lojistas/$id" });
   const qc = useQueryClient();
@@ -40,43 +32,43 @@ function LojistaDetail() {
   const [newStatus, setNewStatus] = useState<string>("");
   const [reason, setReason] = useState<string>("");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin", "store", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_store_detail", { _store_id: id });
-      if (error) throw error;
-      return data as unknown as Detail;
-    },
-  });
+  const { data, isLoading } = useAdminStoreDetail(id);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin", "store", id] });
 
-  const changeStatus = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_set_subscription_status", { _store_id: id, _status: newStatus as never, _reason: reason || undefined });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Status atualizado"); invalidate(); setNewStatus(""); setReason(""); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const extendTrial = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_extend_trial", { _store_id: id, _days: parseInt(days, 10) });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Trial estendido"); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const addNote = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_add_note", { _store_id: id, _note: note });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Nota salva"); setNote(""); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const changeStatusMut = useSetSubscriptionStatusDetail(id);
+  const extendTrialMut = useExtendTrial(id);
+  const addNoteMut = useAddAdminNote(id);
+  const changeStatus = {
+    isPending: changeStatusMut.isPending,
+    mutate: () =>
+      changeStatusMut.mutate(
+        { status: newStatus, reason: reason || undefined },
+        {
+          onSuccess: () => {
+            toast.success("Status atualizado");
+            setNewStatus(""); setReason("");
+          },
+          onError: (e: Error) => toast.error(e.message),
+        },
+      ),
+  };
+  const extendTrial = {
+    isPending: extendTrialMut.isPending,
+    mutate: () =>
+      extendTrialMut.mutate(parseInt(days, 10), {
+        onSuccess: () => toast.success("Trial estendido"),
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
+  const addNote = {
+    isPending: addNoteMut.isPending,
+    mutate: () =>
+      addNoteMut.mutate(note, {
+        onSuccess: () => { toast.success("Nota salva"); setNote(""); },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   if (isLoading || !data) return <AdminShell title="Lojista"><div className="text-muted-foreground">Carregando...</div></AdminShell>;
   const s = data.store;
@@ -178,14 +170,18 @@ function ChurnCard({ storeId, current, onDone }: { storeId: string; current: Det
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(false);
-  const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.rpc("admin_register_churn", { _store_id: storeId, _reason: reason as never, _note: note || undefined });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Motivo registrado"); onDone(); setOpen(false); setReason(""); setNote(""); },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const saveMut = useRegisterChurn(storeId);
+  const save = {
+    isPending: saveMut.isPending,
+    mutate: () =>
+      saveMut.mutate(
+        { reason, note: note || undefined },
+        {
+          onSuccess: () => { toast.success("Motivo registrado"); onDone(); setOpen(false); setReason(""); setNote(""); },
+          onError: (e: Error) => toast.error(e.message),
+        },
+      ),
+  };
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h3 className="font-semibold mb-2">Motivo de desistência</h3>
