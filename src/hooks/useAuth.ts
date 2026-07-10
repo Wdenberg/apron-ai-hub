@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { qk } from "@/lib/queryKeys";
 import {
   getCurrentUser,
   signInWithPassword,
@@ -11,14 +12,14 @@ import {
 
 export function useAuthUser() {
   return useQuery({
-    queryKey: ["auth-user"],
+    queryKey: qk.auth.user,
     queryFn: () => getCurrentUser(),
   });
 }
 
 export function useSessionUser() {
   return useQuery({
-    queryKey: ["session"],
+    queryKey: qk.auth.session,
     queryFn: () => getCurrentUser(),
   });
 }
