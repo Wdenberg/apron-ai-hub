@@ -1,8 +1,13 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation } from "@tanstack/react-query";
-import { StoreImage, resolveStoreAssetUrl } from "@/components/StoreImage";
+import {
+  getPublicStore,
+  listPublicProducts,
+} from "@/services/publicStoreService";
+import { getCurrentUser } from "@/services/authService";
+import { useCreatePublicOrder } from "@/hooks/usePublicStore";
+import { useAssetUrl } from "@/hooks/useAssets";
+import { StoreImage } from "@/components/StoreImage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,22 +24,10 @@ import { Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/loja/$slug")({
   head: () => ({ meta: [{ title: "Loja — ProntoPede" }] }),
   loader: async ({ params }) => {
-    const { data: stores } = await supabase.rpc("get_public_store" as never, {
-      _slug: params.slug,
-    } as never);
-    const store = (stores as Array<{
-      id: string; name: string; slug: string; description: string | null;
-      whatsapp: string; address: string | null; city: string | null; state: string | null;
-      is_open: boolean; logo_url: string | null; cover_url: string | null;
-    }> | null)?.[0];
+    const store = await getPublicStore(params.slug);
     if (!store) throw notFound();
-    const { data: products } = await supabase.rpc("list_public_products" as never, {
-      _slug: params.slug,
-    } as never);
-    return { store, products: (products ?? []) as Array<{
-      id: string; name: string; description: string | null; price: number;
-      stock: number; category: string | null; photo_url: string | null; store_id: string;
-    }> };
+    const products = await listPublicProducts(params.slug);
+    return { store, products };
   },
   component: PublicStore,
   notFoundComponent: () => (
@@ -55,13 +48,10 @@ function PublicStore() {
   const { store, products } = Route.useLoaderData();
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const coverUrl = useAssetUrl(store.cover_url);
   const [lastOrder, setLastOrder] = useState<{ number: number } | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  useEffect(() => { supabase.auth.getUser().then(({ data }) => setIsLoggedIn(!!data.user)); }, []);
-  useEffect(() => {
-    resolveStoreAssetUrl(store.cover_url).then(setCoverUrl);
-  }, [store.cover_url]);
+  useEffect(() => { getCurrentUser().then((u) => setIsLoggedIn(!!u)); }, []);
 
   const items = Object.values(cart);
   const total = items.reduce((s, i) => s + i.price * i.qty, 0);
@@ -91,35 +81,53 @@ function PublicStore() {
     });
   }
 
-  const submitOrder = useMutation({
-    mutationFn: async (payload: z.infer<typeof checkoutSchema>) => {
-      const { data, error } = await supabase.rpc("create_public_order" as never, {
-        _store_id: store.id,
-        _customer_name: payload.name,
-        _customer_whatsapp: payload.whatsapp,
-        _notes: payload.notes || null,
-        _items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
-        _customer_user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
-      } as never);
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      return { ...(row as { id: string; order_number: number }), payload };
+  const createOrder = useCreatePublicOrder();
+  const submitOrder = {
+    isPending: createOrder.isPending,
+    mutate: async (payload: z.infer<typeof checkoutSchema>) => {
+      try {
+        const user = await getCurrentUser();
+        const row = await createOrder.mutateAsync({
+          storeId: store.id,
+          customerName: payload.name,
+          customerWhatsapp: payload.whatsapp,
+          notes: payload.notes || null,
+          items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
+          customerUserId: user?.id ?? null,
+        });
+        onSubmitOrderSuccess({ ...row, payload });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao enviar pedido");
+      }
     },
+  };
+
+  function onSubmitOrderSuccess(order: { id: string; order_number: number; payload: z.infer<typeof checkoutSchema> }) {
+    openWhatsAppOrder({
+      storeName: store.name,
+      storePhone: store.whatsapp,
+      orderNumber: order.order_number,
+      customerName: order.payload.name,
+      customerPhone: order.payload.whatsapp,
+      items: items.map((i) => ({ name: i.name, quantity: i.qty, unit_price: i.price })),
+      total,
+      notes: order.payload.notes ?? null,
+    });
+    setCart({}); setCheckoutOpen(false); setLastOrder({ number: order.order_number });
+    toast.success(`Pedido #${order.order_number} enviado!`);
+  }
+
+  const _originalSubmit = {
+    // preserved for structural compatibility
+  };
+
+  // legacy inline result handler (unused; kept for parity)
+  const _unused = useMutation({
+    mutationFn: async () => undefined,
     onSuccess: (order) => {
-      openWhatsAppOrder({
-        storeName: store.name,
-        storePhone: store.whatsapp,
-        orderNumber: order.order_number,
-        customerName: order.payload.name,
-        customerPhone: order.payload.whatsapp,
-        items: items.map((i) => ({ name: i.name, quantity: i.qty, unit_price: i.price })),
-        total,
-        notes: order.payload.notes ?? null,
-      });
-      setCart({}); setCheckoutOpen(false); setLastOrder({ number: order.order_number });
-      toast.success(`Pedido #${order.order_number} enviado!`);
+      void order;
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => void e,
   });
 
   function checkout(e: React.FormEvent<HTMLFormElement>) {
