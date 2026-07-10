@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { StoreImage } from "@/components/StoreImage";
@@ -12,6 +12,7 @@ import {
   useUpdateProductStock,
   useDeleteProducts,
 } from "@/hooks/useProducts";
+import { deleteAssets } from "@/services/assetsService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +77,10 @@ function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  // Local preview state — the file is only uploaded when the user hits Salvar.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [originalPhotoPath, setOriginalPhotoPath] = useState<string | null>(null);
   const [categoryValue, setCategoryValue] = useState<string>("");
   const [activeValue, setActiveValue] = useState<boolean>(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -90,6 +95,13 @@ function ProductsPage() {
   const uploadingPhoto = uploadPhotoMut.isPending;
   const updateStock = useUpdateProductStock();
   const deleteProductsMut = useDeleteProducts();
+
+  // Revoke object URLs to avoid memory leaks when the preview changes/unmounts.
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
 
   const categories = Array.from(new Set((products ?? []).map((p) => p.category).filter(Boolean))) as string[];
 
@@ -115,6 +127,7 @@ function ProductsPage() {
   function openNew() {
     setEditing(null);
     setPhotoPath(null);
+    resetPhotoPicker(null);
     setCategoryValue("");
     setActiveValue(true);
     setDialogOpen(true);
@@ -123,6 +136,7 @@ function ProductsPage() {
   function openEdit(p: Product) {
     setEditing(p);
     setPhotoPath(p.photo_url);
+    resetPhotoPicker(p.photo_url);
     setCategoryValue(p.category ?? "");
     setActiveValue(p.active);
     setDialogOpen(true);
@@ -133,21 +147,42 @@ function ProductsPage() {
     setStockValue(String(p.stock));
   }
 
+  const ALLOWED_PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+  function resetPhotoPicker(originalPath: string | null) {
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setOriginalPhotoPath(originalPath);
+  }
+
   function handlePhoto(file: File) {
-    if (!store?.id) return;
-    uploadPhotoMut.mutate(
-      { storeId: store.id, file },
-      {
-        onSuccess: (path) => setPhotoPath(path),
-        onError: (e: Error) => toast.error(e.message),
-      },
-    );
+    if (!ALLOWED_PHOTO_MIMES.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast.error("Imagem maior que 5MB.");
+      return;
+    }
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    // Keep photoPath as the "current saved" reference until save happens.
+  }
+
+  function clearPhoto() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    setPhotoPath(null);
   }
 
   const upsert = useUpsertProduct();
   const toggleActive = useToggleProductActive();
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const parsed = schema.safeParse({
@@ -159,6 +194,21 @@ function ProductsPage() {
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     if (!store?.id) { toast.error("Sem loja"); return; }
+
+    // Deferred upload: only push the file to Storage on save.
+    let finalPhotoPath: string | null = photoPath;
+    try {
+      if (photoFile) {
+        finalPhotoPath = await uploadPhotoMut.mutateAsync({
+          storeId: store.id,
+          file: photoFile,
+        });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar imagem");
+      return;
+    }
+
     upsert.mutate(
       {
         id: editing?.id,
@@ -170,14 +220,27 @@ function ProductsPage() {
           stock: parsed.data.stock,
           category: parsed.data.category || null,
           active: parsed.data.stock > 0 ? activeValue : false,
-          photo_url: photoPath,
+          photo_url: finalPhotoPath,
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Cleanup the previous image if it was replaced or removed.
+          if (
+            originalPhotoPath &&
+            originalPhotoPath !== finalPhotoPath &&
+            !originalPhotoPath.startsWith("http")
+          ) {
+            try {
+              await deleteAssets([originalPhotoPath]);
+            } catch (err) {
+              console.error("[produtos] failed to remove old photo", err);
+            }
+          }
           setDialogOpen(false);
           setEditing(null);
           setPhotoPath(null);
+          resetPhotoPicker(null);
           setCategoryValue("");
           setActiveValue(true);
           toast.success("Produto salvo!");
@@ -207,16 +270,39 @@ function ProductsPage() {
   }
 
   function confirmDelete(ids: string[], onDone?: () => void) {
-    deleteProductsMut.mutate(ids, {
-      onSuccess: () => {
-        toast.success(
-          ids.length > 1
-            ? `${ids.length} produtos excluídos`
-            : "Produto excluído",
-        );
+    const list = (products ?? []).filter((p) => ids.includes(p.id));
+    const targets = list.map((p) => ({
+      id: p.id,
+      name: p.name,
+      photo_url: p.photo_url,
+    }));
+    deleteProductsMut.mutate(targets, {
+      onSuccess: (res) => {
+        const okCount = res.succeeded.length;
+        const failCount = res.failed.length;
+        if (okCount > 0 && failCount === 0) {
+          toast.success(
+            okCount > 1 ? `${okCount} produtos excluídos` : "Produto excluído",
+          );
+        } else if (okCount > 0 && failCount > 0) {
+          toast.warning(
+            `${okCount} excluído(s), ${failCount} falha(s)`,
+            {
+              description: res.failed
+                .map((f) => `${f.name ?? f.id}: ${f.reason}`)
+                .join(" • "),
+            },
+          );
+        } else {
+          toast.error("Falha ao excluir", {
+            description: res.failed
+              .map((f) => `${f.name ?? f.id}: ${f.reason}`)
+              .join(" • "),
+          });
+        }
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          ids.forEach((id) => next.delete(id));
+          res.succeeded.forEach((id) => next.delete(id));
           return next;
         });
         onDone?.();
