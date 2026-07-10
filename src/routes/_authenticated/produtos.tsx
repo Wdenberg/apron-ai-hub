@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { StoreImage } from "@/components/StoreImage";
@@ -12,6 +12,7 @@ import {
   useUpdateProductStock,
   useDeleteProducts,
 } from "@/hooks/useProducts";
+import { deleteAssets } from "@/services/assetsService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +77,10 @@ function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
+  // Local preview state — the file is only uploaded when the user hits Salvar.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [originalPhotoPath, setOriginalPhotoPath] = useState<string | null>(null);
   const [categoryValue, setCategoryValue] = useState<string>("");
   const [activeValue, setActiveValue] = useState<boolean>(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -90,6 +95,13 @@ function ProductsPage() {
   const uploadingPhoto = uploadPhotoMut.isPending;
   const updateStock = useUpdateProductStock();
   const deleteProductsMut = useDeleteProducts();
+
+  // Revoke object URLs to avoid memory leaks when the preview changes/unmounts.
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
 
   const categories = Array.from(new Set((products ?? []).map((p) => p.category).filter(Boolean))) as string[];
 
@@ -115,6 +127,7 @@ function ProductsPage() {
   function openNew() {
     setEditing(null);
     setPhotoPath(null);
+    resetPhotoPicker(null);
     setCategoryValue("");
     setActiveValue(true);
     setDialogOpen(true);
@@ -123,6 +136,7 @@ function ProductsPage() {
   function openEdit(p: Product) {
     setEditing(p);
     setPhotoPath(p.photo_url);
+    resetPhotoPicker(p.photo_url);
     setCategoryValue(p.category ?? "");
     setActiveValue(p.active);
     setDialogOpen(true);
@@ -133,21 +147,42 @@ function ProductsPage() {
     setStockValue(String(p.stock));
   }
 
+  const ALLOWED_PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+  function resetPhotoPicker(originalPath: string | null) {
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setOriginalPhotoPath(originalPath);
+  }
+
   function handlePhoto(file: File) {
-    if (!store?.id) return;
-    uploadPhotoMut.mutate(
-      { storeId: store.id, file },
-      {
-        onSuccess: (path) => setPhotoPath(path),
-        onError: (e: Error) => toast.error(e.message),
-      },
-    );
+    if (!ALLOWED_PHOTO_MIMES.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WEBP.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      toast.error("Imagem maior que 5MB.");
+      return;
+    }
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    // Keep photoPath as the "current saved" reference until save happens.
+  }
+
+  function clearPhoto() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    setPhotoPath(null);
   }
 
   const upsert = useUpsertProduct();
   const toggleActive = useToggleProductActive();
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const parsed = schema.safeParse({
@@ -159,6 +194,21 @@ function ProductsPage() {
     });
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos"); return; }
     if (!store?.id) { toast.error("Sem loja"); return; }
+
+    // Deferred upload: only push the file to Storage on save.
+    let finalPhotoPath: string | null = photoPath;
+    try {
+      if (photoFile) {
+        finalPhotoPath = await uploadPhotoMut.mutateAsync({
+          storeId: store.id,
+          file: photoFile,
+        });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar imagem");
+      return;
+    }
+
     upsert.mutate(
       {
         id: editing?.id,
@@ -170,14 +220,27 @@ function ProductsPage() {
           stock: parsed.data.stock,
           category: parsed.data.category || null,
           active: parsed.data.stock > 0 ? activeValue : false,
-          photo_url: photoPath,
+          photo_url: finalPhotoPath,
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Cleanup the previous image if it was replaced or removed.
+          if (
+            originalPhotoPath &&
+            originalPhotoPath !== finalPhotoPath &&
+            !originalPhotoPath.startsWith("http")
+          ) {
+            try {
+              await deleteAssets([originalPhotoPath]);
+            } catch (err) {
+              console.error("[produtos] failed to remove old photo", err);
+            }
+          }
           setDialogOpen(false);
           setEditing(null);
           setPhotoPath(null);
+          resetPhotoPicker(null);
           setCategoryValue("");
           setActiveValue(true);
           toast.success("Produto salvo!");
@@ -207,16 +270,39 @@ function ProductsPage() {
   }
 
   function confirmDelete(ids: string[], onDone?: () => void) {
-    deleteProductsMut.mutate(ids, {
-      onSuccess: () => {
-        toast.success(
-          ids.length > 1
-            ? `${ids.length} produtos excluídos`
-            : "Produto excluído",
-        );
+    const list = (products ?? []).filter((p) => ids.includes(p.id));
+    const targets = list.map((p) => ({
+      id: p.id,
+      name: p.name,
+      photo_url: p.photo_url,
+    }));
+    deleteProductsMut.mutate(targets, {
+      onSuccess: (res) => {
+        const okCount = res.succeeded.length;
+        const failCount = res.failed.length;
+        if (okCount > 0 && failCount === 0) {
+          toast.success(
+            okCount > 1 ? `${okCount} produtos excluídos` : "Produto excluído",
+          );
+        } else if (okCount > 0 && failCount > 0) {
+          toast.warning(
+            `${okCount} excluído(s), ${failCount} falha(s)`,
+            {
+              description: res.failed
+                .map((f) => `${f.name ?? f.id}: ${f.reason}`)
+                .join(" • "),
+            },
+          );
+        } else {
+          toast.error("Falha ao excluir", {
+            description: res.failed
+              .map((f) => `${f.name ?? f.id}: ${f.reason}`)
+              .join(" • "),
+          });
+        }
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          ids.forEach((id) => next.delete(id));
+          res.succeeded.forEach((id) => next.delete(id));
           return next;
         });
         onDone?.();
@@ -239,6 +325,7 @@ function ProductsPage() {
             if (!v) {
               setEditing(null);
               setPhotoPath(null);
+              resetPhotoPicker(null);
               setCategoryValue("");
               setActiveValue(true);
             }
@@ -251,21 +338,54 @@ function ProductsPage() {
               <div>
                 <Label className="mb-1.5 block">Foto do produto</Label>
                 <div className="flex items-center gap-4">
-                  {photoPath ? (
-                    <StoreImage path={photoPath} alt="Produto" className="h-20 w-20 rounded-lg object-cover border border-border" fallbackClassName="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center" />
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="Pré-visualização"
+                      className="h-20 w-20 rounded-lg object-cover border border-border"
+                    />
+                  ) : photoPath ? (
+                    <StoreImage
+                      path={photoPath}
+                      alt="Produto"
+                      className="h-20 w-20 rounded-lg object-cover border border-border"
+                      fallbackClassName="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center"
+                    />
                   ) : (
                     <div className="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground">
                       <ImagePlus className="h-6 w-6" />
                     </div>
                   )}
-                  <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-md border border-border bg-background hover:bg-accent cursor-pointer">
-                    {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {photoPath ? "Trocar" : "Enviar"}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); e.currentTarget.value = ""; }} />
-                  </label>
-                  {photoPath && (
-                    <button type="button" className="text-xs text-muted-foreground hover:text-destructive" onClick={() => setPhotoPath(null)}>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-md border border-border bg-background hover:bg-accent cursor-pointer w-fit">
+                      <Upload className="h-4 w-4" />
+                      {photoPreview || photoPath ? "Trocar" : "Enviar"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handlePhoto(f);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {photoFile && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[220px]">
+                        {photoFile.name}
+                      </span>
+                    )}
+                    <span className="text-[11px] text-muted-foreground">
+                      JPG, PNG ou WEBP · máx. 5MB
+                    </span>
+                  </div>
+                  {(photoPreview || photoPath) && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                      onClick={clearPhoto}
+                    >
                       Remover
                     </button>
                   )}
@@ -322,7 +442,12 @@ function ProductsPage() {
                 />
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={upsert.isPending}>{upsert.isPending ? "Salvando..." : "Salvar"}</Button>
+                <Button type="submit" disabled={upsert.isPending || uploadingPhoto}>
+                  {(upsert.isPending || uploadingPhoto) && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
+                  {uploadingPhoto ? "Enviando..." : upsert.isPending ? "Salvando..." : "Salvar"}
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -495,14 +620,21 @@ function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteProductsMut.isPending}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              disabled={deleteProductsMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
                 if (!deleteOne) return;
                 confirmDelete([deleteOne.id], () => setDeleteOne(null));
               }}
             >
+              {deleteProductsMut.isPending && (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              )}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -521,13 +653,20 @@ function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteProductsMut.isPending}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() =>
-                confirmDelete(Array.from(selectedIds), () => setDeleteBulk(false))
-              }
+              disabled={deleteProductsMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete(Array.from(selectedIds), () => setDeleteBulk(false));
+              }}
             >
+              {deleteProductsMut.isPending && (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              )}
               Excluir tudo
             </AlertDialogAction>
           </AlertDialogFooter>
