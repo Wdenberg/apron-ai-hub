@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { adminCreateLojista } from "@/lib/admin-lojista.functions";
 import {
   listAdminStores,
   getAdminStoreDetail,
@@ -77,5 +79,15 @@ export function useRegisterChurn(storeId: string) {
     mutationFn: (payload: { reason: string; note?: string }) =>
       registerChurn(storeId, payload.reason, payload.note),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "store", storeId] }),
+  });
+}
+
+export function useCreateLojista() {
+  const qc = useQueryClient();
+  const createFn = useServerFn(adminCreateLojista);
+  return useMutation({
+    mutationFn: (data: Parameters<typeof createFn>[0]["data"]) =>
+      createFn({ data }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "stores"] }),
   });
 }
