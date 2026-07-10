@@ -68,6 +68,20 @@ export async function setProductActive(id: string, active: boolean) {
   if (error) throw error;
 }
 
+export async function updateProductStock(id: string, stock: number) {
+  const { error } = await supabase
+    .from("products")
+    .update({ stock, active: stock > 0 })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteProducts(ids: string[]) {
+  if (!ids.length) return;
+  const { error } = await supabase.from("products").delete().in("id", ids);
+  if (error) throw error;
+}
+
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
