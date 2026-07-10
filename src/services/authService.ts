@@ -40,7 +40,9 @@ export async function updateUserPassword(password: string) {
 }
 
 export function onAuthStateChange(
-  cb: Parameters<typeof supabase.auth.onAuthStateChange>[0],
+  cb: (event: string) => void,
 ) {
-  return supabase.auth.onAuthStateChange(cb);
+  return supabase.auth.onAuthStateChange((event) => {
+    cb(event);
+  });
 }
