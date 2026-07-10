@@ -144,10 +144,42 @@ function Index() {
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { name: "Mensal", price: "R$ 39,90", period: "/mês", note: "Cobrança mensal", highlight: false },
-              { name: "Trimestral", price: "R$ 107,73", period: "/trimestre", note: "Equivale a R$ 35,91/mês", highlight: false },
-              { name: "Semestral", price: "R$ 203,49", period: "/semestre", note: "Equivale a R$ 33,92/mês", highlight: true },
-              { name: "Anual", price: "R$ 383,04", period: "/ano", note: "Equivale a R$ 31,92/mês", highlight: false },
+              {
+                name: "Mensal",
+                price: "R$ 40,00",
+                period: "/mês",
+                discount: null,
+                note: "Cobrança mensal",
+                benefit: null,
+                highlight: false,
+              },
+              {
+                name: "Trimestral",
+                price: "R$ 108,00",
+                period: "/trimestre",
+                discount: "10% de desconto",
+                note: "Equivale a R$ 36,00/mês",
+                benefit: "Você economiza R$ 12,00",
+                highlight: false,
+              },
+              {
+                name: "Semestral",
+                price: "R$ 204,00",
+                period: "/semestre",
+                discount: "15% de desconto",
+                note: "Equivale a R$ 34,00/mês",
+                benefit: "Você economiza R$ 36,00",
+                highlight: true,
+              },
+              {
+                name: "Anual",
+                price: "R$ 384,00",
+                period: "/ano",
+                discount: "20% de desconto",
+                note: "Equivale a R$ 32,00/mês",
+                benefit: "Ganhe 2 meses GRÁTIS",
+                highlight: false,
+              },
             ].map((p) => (
               <div
                 key={p.name}
@@ -169,7 +201,17 @@ function Index() {
                   <span className="text-3xl lg:text-4xl font-extrabold">{p.price}</span>
                   <span className="text-muted-foreground text-sm">{p.period}</span>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{p.note}</div>
+                {p.discount && (
+                  <div className="mt-2 inline-flex w-fit items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success">
+                    {p.discount}
+                  </div>
+                )}
+                <div className="mt-2 text-xs text-muted-foreground">{p.note}</div>
+                {p.benefit && (
+                  <div className="mt-2 text-xs font-semibold text-primary">
+                    {p.benefit}
+                  </div>
+                )}
                 <Link to="/auth" search={{ mode: "signup" } as never} className="mt-auto pt-6">
                   <Button size="lg" className="w-full" variant={p.highlight ? "default" : "outline"}>
                     Começar teste grátis
