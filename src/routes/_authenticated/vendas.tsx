@@ -66,6 +66,10 @@ type Sale = {
   payment: PaymentMethod;
   created_at: string;
   notes: string | null;
+  order_items: {
+    quantity: number;
+    products: { name: string } | null;
+  }[];
 };
 
 const schema = z.object({
@@ -122,7 +126,7 @@ function VendasPage() {
       const { data } = await supabase
         .from("orders")
         .select(
-          "id, order_number, customer_name, customer_whatsapp, total, payment, created_at, notes",
+          "id, order_number, customer_name, customer_whatsapp, total, payment, created_at, notes, order_items(quantity, products(name))",
         )
         .eq("store_id", store!.id)
         .eq("type", "presencial")
@@ -172,18 +176,32 @@ function VendasPage() {
                   <th className="text-left px-4 py-2">#</th>
                   <th className="text-left px-4 py-2">Cliente</th>
                   <th className="text-left px-4 py-2">Telefone</th>
+                  <th className="text-left px-4 py-2">Produto</th>
                   <th className="text-left px-4 py-2">Pagamento</th>
                   <th className="text-right px-4 py-2">Total</th>
                   <th className="text-left px-4 py-2 whitespace-nowrap">Data</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.map((s) => (
+                {sales.map((s) => {
+                  const items = s.order_items ?? [];
+                  const label = items.length
+                    ? items
+                        .map(
+                          (it) =>
+                            `${it.quantity}x ${it.products?.name ?? "Item"}`,
+                        )
+                        .join(", ")
+                    : "—";
+                  return (
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-4 py-2 font-medium">#{s.order_number}</td>
                     <td className="px-4 py-2">{s.customer_name}</td>
                     <td className="px-4 py-2 text-muted-foreground">
                       {s.customer_whatsapp ?? "—"}
+                    </td>
+                    <td className="px-4 py-2 max-w-[220px] truncate" title={label}>
+                      {label}
                     </td>
                     <td className="px-4 py-2">
                       <span className="inline-flex px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
@@ -202,7 +220,8 @@ function VendasPage() {
                       })}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
