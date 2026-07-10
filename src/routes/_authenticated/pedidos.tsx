@@ -373,6 +373,10 @@ function PrintReceipt({
   order: Order;
   items: { name: string; quantity: number }[];
 }) {
+  function abbreviateName(text: string, max: number) {
+    const t = text.trim().replace(/\s+/g, " ");
+    return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+  }
   const dt = new Date(order.created_at).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -399,18 +403,16 @@ function PrintReceipt({
       <hr />
       <div>
         {items.map((it, i) => (
-          <div key={i} className="row">
-            <span>
-              {it.quantity}x {it.name}
-            </span>
+          <div key={i} className="item">
+            {it.quantity}x {abbreviateName(it.name, 60)}
           </div>
         ))}
       </div>
       {order.notes && (
         <>
           <hr />
-          <div>
-            <strong>Obs:</strong> {order.notes}
+          <div className="notes">
+            <strong>Obs:</strong> {abbreviateName(order.notes, 240)}
           </div>
         </>
       )}

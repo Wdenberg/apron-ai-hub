@@ -210,6 +210,20 @@
   .print-receipt .muted {
     font-size: 11px;
   }
+  .print-receipt .item {
+    display: block;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .print-receipt .notes {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    white-space: pre-wrap;
+  }
   @page {
     margin: 4mm;
   }
