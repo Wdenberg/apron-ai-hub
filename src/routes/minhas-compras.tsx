@@ -1,12 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
 import { useSessionUser } from "@/hooks/useAuth";
-import { useProfileBasic } from "@/hooks/useProfile";
+import { useProfileBasic, useSaveMyPhone } from "@/hooks/useProfile";
 import { useMyOrders } from "@/hooks/useMyOrders";
-import {
-  isPhoneTakenByOther,
-  updateProfile,
-} from "@/services/profileService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,16 +21,15 @@ function MyOrders() {
   const session = useSessionUser();
   const profile = useProfileBasic(session.data?.id);
   const orders = useMyOrders(!!session.data && !!profile.data?.whatsapp, session.data?.id);
-
-  const savePhone = useMutation({
-    mutationFn: async (whatsapp: string) => {
-      const taken = await isPhoneTakenByOther(whatsapp, session.data!.id);
-      if (taken) throw new Error("Telefone já cadastrado em outra conta.");
-      await updateProfile(session.data!.id, { whatsapp });
-    },
-    onSuccess: () => { toast.success("Telefone salvo!"); profile.refetch(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const savePhoneMut = useSaveMyPhone(session.data?.id);
+  const savePhone = {
+    isPending: savePhoneMut.isPending,
+    mutate: (whatsapp: string) =>
+      savePhoneMut.mutate(whatsapp, {
+        onSuccess: () => { toast.success("Telefone salvo!"); profile.refetch(); },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   const [phoneInput, setPhoneInput] = useState("");
 
