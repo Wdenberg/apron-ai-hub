@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { MessageCircle, ClipboardList, XCircle, Pencil } from "lucide-react";
+import { MessageCircle, ClipboardList, XCircle, Pencil, Printer } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Status = Database["public"]["Enums"]["order_status"];
@@ -75,6 +75,10 @@ function OrdersPage() {
   const [editing, setEditing] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState<Order | null>(null);
   const [payAsking, setPayAsking] = useState<Order | null>(null);
+  const [printData, setPrintData] = useState<{
+    order: Order;
+    items: { name: string; quantity: number }[];
+  } | null>(null);
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -124,6 +128,26 @@ function OrdersPage() {
       return;
     }
     updateOrder.mutate({ id: o.id, status: next });
+  }
+
+  async function handlePrint(o: Order) {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("quantity, products(name)")
+      .eq("order_id", o.id);
+    if (error) {
+      toast.error("Erro ao carregar itens do pedido");
+      return;
+    }
+    const items = (data ?? []).map((r: { quantity: number; products: { name: string } | null }) => ({
+      name: r.products?.name ?? "Item",
+      quantity: r.quantity,
+    }));
+    setPrintData({ order: o, items });
+    // Wait for React to render the hidden receipt before opening the print dialog.
+    await new Promise((r) => setTimeout(r, 50));
+    window.print();
+    setTimeout(() => setPrintData(null), 300);
   }
 
   return (
@@ -227,6 +251,15 @@ function OrdersPage() {
                             title="Editar"
                           >
                             <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0"
+                            onClick={() => handlePrint(o)}
+                            title="Imprimir comanda"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
