@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { StoreImage, resolveStoreAssetUrl } from "@/components/StoreImage";
-import { supabase } from "@/integrations/supabase/client";
+import { StoreImage } from "@/components/StoreImage";
+import { useAssetUrl } from "@/hooks/useAssets";
+import { useAuthUser, useUpdateEmail, useUpdatePassword } from "@/hooks/useAuth";
+import { useProfile, useUpdateProfile, useUploadAvatar } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,35 +32,19 @@ const passwordSchema = z
 const emailSchema = z.string().trim().email("E-mail inválido").max(120);
 
 function PerfilPage() {
-  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingEmail, setSavingEmail] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
+  const { data: user } = useAuthUser();
+  const { data: profile, isLoading } = useProfile(user?.id);
+  const updateProfileMut = useUpdateProfile();
+  const updateEmailMut = useUpdateEmail();
+  const updatePasswordMut = useUpdatePassword();
+  const uploadAvatarMut = useUploadAvatar();
+  const avatarPreview = useAssetUrl(profile?.avatar_url ?? null);
 
-  const { data: user } = useQuery({
-    queryKey: ["auth-user"],
-    queryFn: async () => (await supabase.auth.getUser()).data.user,
-  });
-
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["my-profile", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, whatsapp, avatar_url")
-        .eq("id", user!.id)
-        .maybeSingle();
-      return data;
-    },
-  });
-
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  useEffect(() => {
-    resolveStoreAssetUrl(profile?.avatar_url ?? null).then(setAvatarPreview);
-  }, [profile?.avatar_url]);
+  const uploading = uploadAvatarMut.isPending;
+  const savingProfile = updateProfileMut.isPending;
+  const savingEmail = updateEmailMut.isPending;
+  const savingPassword = updatePasswordMut.isPending;
 
   async function saveProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,15 +58,16 @@ function PerfilPage() {
       toast.error(parsed.error.issues[0]?.message ?? "Verifique os campos");
       return;
     }
-    setSavingProfile(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: parsed.data.full_name, whatsapp: parsed.data.whatsapp })
-      .eq("id", user.id);
-    setSavingProfile(false);
-    if (error) return toast.error(error.message);
-    toast.success("Perfil atualizado");
-    qc.invalidateQueries({ queryKey: ["my-profile"] });
+    updateProfileMut.mutate(
+      {
+        userId: user.id,
+        patch: { full_name: parsed.data.full_name, whatsapp: parsed.data.whatsapp },
+      },
+      {
+        onSuccess: () => toast.success("Perfil atualizado"),
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
   }
 
   async function saveEmail(e: React.FormEvent<HTMLFormElement>) {
@@ -90,11 +76,11 @@ function PerfilPage() {
     const parsed = emailSchema.safeParse(fd.get("email"));
     if (!parsed.success) return toast.error(parsed.error.issues[0]?.message ?? "E-mail inválido");
     if (parsed.data === user?.email) return toast.info("Este já é o seu e-mail atual");
-    setSavingEmail(true);
-    const { error } = await supabase.auth.updateUser({ email: parsed.data });
-    setSavingEmail(false);
-    if (error) return toast.error(error.message);
-    toast.success("Verifique seu novo e-mail para confirmar a alteração");
+    updateEmailMut.mutate(parsed.data, {
+      onSuccess: () =>
+        toast.success("Verifique seu novo e-mail para confirmar a alteração"),
+      onError: (e: Error) => toast.error(e.message),
+    });
   }
 
   async function savePassword(e: React.FormEvent<HTMLFormElement>) {
@@ -106,38 +92,26 @@ function PerfilPage() {
       confirm: fd.get("confirm"),
     });
     if (!parsed.success) return toast.error(parsed.error.issues[0]?.message ?? "Senha inválida");
-    setSavingPassword(true);
-    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-    setSavingPassword(false);
-    if (error) return toast.error(error.message);
-    form.reset();
-    toast.success("Senha atualizada");
+    updatePasswordMut.mutate(parsed.data.password, {
+      onSuccess: () => {
+        form.reset();
+        toast.success("Senha atualizada");
+      },
+      onError: (e: Error) => toast.error(e.message),
+    });
   }
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !user) return;
-    if (!file.type.startsWith("image/")) return toast.error("Envie uma imagem");
-    if (file.size > 5 * 1024 * 1024) return toast.error("Imagem acima de 5MB");
-    setUploading(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `avatars/${user.id}/${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("store-assets")
-      .upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) {
-      setUploading(false);
-      return toast.error(upErr.message);
-    }
-    const { error: dbErr } = await supabase
-      .from("profiles")
-      .update({ avatar_url: path })
-      .eq("id", user.id);
-    setUploading(false);
-    if (dbErr) return toast.error(dbErr.message);
-    toast.success("Foto atualizada");
-    qc.invalidateQueries({ queryKey: ["my-profile"] });
+    uploadAvatarMut.mutate(
+      { userId: user.id, file },
+      {
+        onSuccess: () => toast.success("Foto atualizada"),
+        onError: (e: Error) => toast.error(e.message),
+      },
+    );
   }
 
   return (
