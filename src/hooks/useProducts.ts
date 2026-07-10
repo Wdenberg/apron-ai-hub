@@ -6,6 +6,8 @@ import {
   upsertProduct,
   setProductActive,
   uploadProductPhoto,
+  updateProductStock,
+  deleteProducts,
   type ProductWriteRow,
 } from "@/services/productsService";
 
@@ -47,5 +49,22 @@ export function useUploadProductPhoto() {
   return useMutation({
     mutationFn: (payload: { storeId: string; file: File }) =>
       uploadProductPhoto(payload.storeId, payload.file),
+  });
+}
+
+export function useUpdateProductStock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { id: string; stock: number }) =>
+      updateProductStock(payload.id, payload.stock),
+    onSuccess: () => invalidate.products(qc),
+  });
+}
+
+export function useDeleteProducts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => deleteProducts(ids),
+    onSuccess: () => invalidate.products(qc),
   });
 }
