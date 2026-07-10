@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMyStoreShell } from "@/hooks/useStore";
+import {
+  useActiveOrders,
+  useUpdateOrder,
+  fetchOrderItems,
+} from "@/hooks/useOrders";
 import {
   formatBRL,
   ORDER_STATUS_LABELS,
@@ -39,10 +43,10 @@ import {
 import { toast } from "sonner";
 import { MessageCircle, ClipboardList, XCircle, Pencil, Printer } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Database } from "@/integrations/supabase/types";
-
-type Status = Database["public"]["Enums"]["order_status"];
-type PayStatus = Database["public"]["Enums"]["payment_status"];
+import type {
+  OrderStatus as Status,
+  PaymentStatus as PayStatus,
+} from "@/services/ordersService";
 
 export const Route = createFileRoute("/_authenticated/pedidos")({
   head: () => ({ meta: [{ title: "Pedidos — ProntoPede" }] }),
@@ -72,7 +76,6 @@ type Order = {
 };
 
 function OrdersPage() {
-  const qc = useQueryClient();
   const [editing, setEditing] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState<Order | null>(null);
   const [payAsking, setPayAsking] = useState<Order | null>(null);
@@ -94,44 +97,9 @@ function OrdersPage() {
     }
   }, [printWidth]);
 
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () =>
-      (await supabase.from("stores").select("id, name").maybeSingle()).data,
-  });
-
-  const { data: orders } = useQuery({
-    queryKey: ["orders", store?.id],
-    enabled: !!store?.id,
-    refetchInterval: 15000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select(
-          "id, order_number, customer_name, customer_whatsapp, total, status, payment_status, created_at, notes",
-        )
-        .eq("store_id", store!.id)
-        .neq("status", "cancelado")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      return (data ?? []) as Order[];
-    },
-  });
-
-  const updateOrder = useMutation({
-    mutationFn: async (patch: {
-      id: string;
-      status?: Status;
-      payment_status?: PayStatus;
-      notes?: string | null;
-    }) => {
-      const { id, ...changes } = patch;
-      const { error } = await supabase.from("orders").update(changes).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const { data: store } = useMyStoreShell();
+  const { data: orders } = useActiveOrders(store?.id);
+  const updateOrder = useUpdateOrder();
 
   function advance(o: Order) {
     const i = STATUS_FLOW.indexOf(o.status);
@@ -156,17 +124,16 @@ function OrdersPage() {
   async function printOrders(list: Order[]) {
     if (!list.length) return;
     const ids = list.map((o) => o.id);
-    const { data, error } = await supabase
-      .from("order_items")
-      .select("order_id, quantity, products(name)")
-      .in("order_id", ids);
-    if (error) {
+    let data: Awaited<ReturnType<typeof fetchOrderItems>>;
+    try {
+      data = await fetchOrderItems(ids);
+    } catch {
       toast.error("Erro ao carregar itens do pedido");
       return;
     }
     const map = new Map<string, { name: string; quantity: number }[]>();
-    (data ?? []).forEach(
-      (r: { order_id: string; quantity: number; products: { name: string } | null }) => {
+    data.forEach(
+      (r) => {
         const arr = map.get(r.order_id) ?? [];
         arr.push({ name: r.products?.name ?? "Item", quantity: r.quantity });
         map.set(r.order_id, arr);
