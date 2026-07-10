@@ -82,12 +82,19 @@ export function useRegisterChurn(storeId: string) {
   });
 }
 
+export type CreateLojistaInput = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  store_name?: string;
+};
+
 export function useCreateLojista() {
   const qc = useQueryClient();
   const createFn = useServerFn(adminCreateLojista);
   return useMutation({
-    mutationFn: (data: Parameters<typeof createFn>[0]["data"]) =>
-      createFn({ data }),
+    mutationFn: (data: CreateLojistaInput) => createFn({ data }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "stores"] }),
   });
 }
