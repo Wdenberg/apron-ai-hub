@@ -620,14 +620,21 @@ function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteProductsMut.isPending}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              disabled={deleteProductsMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
                 if (!deleteOne) return;
                 confirmDelete([deleteOne.id], () => setDeleteOne(null));
               }}
             >
+              {deleteProductsMut.isPending && (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              )}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -646,13 +653,20 @@ function ProductsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteProductsMut.isPending}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() =>
-                confirmDelete(Array.from(selectedIds), () => setDeleteBulk(false))
-              }
+              disabled={deleteProductsMut.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete(Array.from(selectedIds), () => setDeleteBulk(false));
+              }}
             >
+              {deleteProductsMut.isPending && (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              )}
               Excluir tudo
             </AlertDialogAction>
           </AlertDialogFooter>
