@@ -704,6 +704,22 @@ export type Database = {
           order_number: number
         }[]
       }
+      create_quick_sale: {
+        Args: {
+          _customer_name: string
+          _customer_whatsapp: string
+          _notes?: string
+          _payment: Database["public"]["Enums"]["payment_method"]
+          _product_id: string
+          _quantity: number
+          _store_id: string
+        }
+        Returns: {
+          id: string
+          order_number: number
+          total: number
+        }[]
+      }
       get_public_store: {
         Args: { _slug: string }
         Returns: {
@@ -797,7 +813,15 @@ export type Database = {
         | "entregue"
         | "cancelado"
       order_type: "reserva" | "presencial"
-      payment_method: "pix" | "cartao" | "dinheiro" | "nao_definido"
+      payment_method:
+        | "pix"
+        | "cartao"
+        | "dinheiro"
+        | "nao_definido"
+        | "cartao_debito"
+        | "cartao_credito"
+        | "transferencia"
+        | "outro"
       payment_status: "pendente" | "pago" | "nao_pago"
       subscription_plan: "mensal" | "trimestral" | "semestral" | "anual"
       subscription_status:
@@ -951,7 +975,16 @@ export const Constants = {
         "cancelado",
       ],
       order_type: ["reserva", "presencial"],
-      payment_method: ["pix", "cartao", "dinheiro", "nao_definido"],
+      payment_method: [
+        "pix",
+        "cartao",
+        "dinheiro",
+        "nao_definido",
+        "cartao_debito",
+        "cartao_credito",
+        "transferencia",
+        "outro",
+      ],
       payment_status: ["pendente", "pago", "nao_pago"],
       subscription_plan: ["mensal", "trimestral", "semestral", "anual"],
       subscription_status: [
