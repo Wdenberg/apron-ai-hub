@@ -1,82 +1,137 @@
-# Refatoração arquitetural — Services + Hooks em toda a aplicação
-
 ## Objetivo
-Mover todas as chamadas diretas a Supabase (`from`, `rpc`, `auth`, `storage`, `channel`) e todo uso de `useQuery`/`useMutation` de dentro dos componentes para duas camadas dedicadas, sem alterar comportamento, layout ou regras de negócio.
 
-## Escopo mapeado (arquivos que hoje contêm dados/queries)
-Rotas de lojista: `dashboard.tsx` (já refatorado), `assinatura.tsx`, `clientes.tsx`, `configuracoes.tsx`, `onboarding.tsx`, `pedidos.tsx`, `perfil.tsx`, `produtos.tsx`, `vendas.tsx`.
-Rotas de admin: `admin/dashboard.tsx`, `admin/campanhas.tsx`, `admin/equipe.tsx`, `admin/lojistas.tsx`, `admin/lojistas.$id.tsx`, `admin/trial.tsx`.
-Rotas públicas / auth: `auth.tsx`, `entrar.tsx`, `loja.$slug.tsx`, `minhas-compras.tsx`, `routes/__root.tsx`.
-Componentes: `AdminShell.tsx`, `AppShell.tsx`, `StoreImage.tsx`.
+Consolidar a refatoração arquitetural em quatro frentes: (1) padronizar `queryKeys`/invalidations, (2) auditar chamadas diretas ao Supabase remanescentes em componentes, (3) cobrir services e hooks com testes unitários e (4) adicionar um teste E2E do fluxo público → pedido → minhas-compras.
 
-Fora de escopo (não são componentes / já são infra):
-`integrations/supabase/*`, `integrations/lovable/*`, `hooks/use-session.ts`, `hooks/use-is-admin.ts`, `routes/_authenticated/route.tsx`, `routes/admin/route.tsx` — já são hooks/guards de sessão.
+---
 
-## Arquitetura alvo
+## 1. Centralização de `queryKeys` e invalidations
 
-```text
-src/
-├── services/
-│   ├── dashboardService.ts        (existente)
-│   ├── storeService.ts            (stores: meus dados, update, upload logo)
-│   ├── productsService.ts         (products CRUD)
-│   ├── ordersService.ts           (orders list/update/quick-sale RPC + realtime)
-│   ├── customersService.ts        (RPC list_store_customers, list_customer_orders)
-│   ├── subscriptionService.ts     (stores billing fields, payments)
-│   ├── profileService.ts          (profiles)
-│   ├── authService.ts             (signIn/signUp/signOut/OAuth/reset)
-│   ├── publicStoreService.ts      (get_public_store, list_public_products, create_public_order)
-│   ├── myOrdersService.ts         (RPC my_orders)
-│   └── admin/
-│       ├── adminStoresService.ts
-│       ├── adminOverviewService.ts
-│       ├── adminTeamService.ts
-│       ├── adminCampaignsService.ts
-│       └── adminTrialService.ts
-│
-└── hooks/
-    ├── useDashboard.ts            (existente)
-    ├── useStore.ts / useUpdateStore.ts
-    ├── useProducts.ts
-    ├── useOrders.ts
-    ├── useCustomers.ts
-    ├── useSubscription.ts
-    ├── useProfile.ts
-    ├── useAuth.ts
-    ├── usePublicStore.ts
-    ├── useMyOrders.ts
-    └── admin/
-        ├── useAdminStores.ts
-        ├── useAdminOverview.ts
-        ├── useAdminTeam.ts
-        ├── useAdminCampaigns.ts
-        └── useAdminTrial.ts
+Criar `src/lib/queryKeys.ts` como fonte única de verdade:
+
+```ts
+export const qk = {
+  auth: { user: ["auth-user"] as const, session: ["session"] as const },
+  store: {
+    mine: ["my-store"] as const,
+    full: ["my-store-full"] as const,
+    subscription: ["my-store-subscription"] as const,
+    exists: ["my-store-exists"] as const,
+    productsCount: (id?: string) => ["products-count", id] as const,
+  },
+  products: {
+    all: ["products"] as const,
+    byStore: (id?: string) => ["products", id] as const,
+    active: (id?: string) => ["products-active", id] as const,
+  },
+  orders: {
+    all: ["orders"] as const,
+    byStore: (id?: string) => ["orders", id] as const,
+    quickSales: (id?: string, days?: number) => ["quick-sales", id, days] as const,
+  },
+  customers: {
+    all: ["customers"] as const,
+    byStore: (id?: string) => ["customers", id] as const,
+    orders: (id?: string) => ["customer-orders", id] as const,
+  },
+  profile: {
+    mine: (uid?: string) => ["my-profile", uid] as const,
+    basic: (uid?: string) => ["profile", uid] as const,
+  },
+  myOrders: (uid?: string | null) => ["my-orders", uid] as const,
+  dashboard: (storeId?: string, days?: number) => ["dashboard", storeId, days] as const,
+  admin: {
+    overview: ["admin", "overview"] as const,
+    stores: (filters?: unknown) => ["admin", "stores", filters] as const,
+    storeDetail: (id?: string) => ["admin", "store", id] as const,
+    team: ["admin", "team"] as const,
+    campaigns: ["admin", "campaigns"] as const,
+    segment: (s: string) => ["admin", "segment", s] as const,
+    trialMetrics: (w: number) => ["admin", "trial-metrics", w] as const,
+    recovery: ["admin", "recovery"] as const,
+  },
+} as const;
+
+export const invalidators = {
+  products: (qc) => qc.invalidateQueries({ queryKey: qk.products.all }),
+  orders: (qc) => qc.invalidateQueries({ queryKey: qk.orders.all }),
+  // ...
+};
 ```
 
-## Regras invariantes
-- Sem mudança de UI, texto, layout, comportamento ou queryKeys existentes.
-- Sem alterar SQL/RPCs — apenas mover a chamada.
-- Preservar tipagens; sem `as any` novos.
-- Reaproveitar tipos gerados em `src/integrations/supabase/types.ts`.
-- Realtime (`supabase.channel`) fica em service, exposto como `subscribeXxx(cb)`; hook faz `useEffect` de assinatura como já feito em `useDashboard`.
-- Storage uploads (`supabase.storage`) ficam em service; hook expõe `useMutation`.
-- `supabase.auth` (login/logout/session) fica em `authService` + `useAuth`. `hooks/use-session.ts` continua sendo a fonte de sessão reativa (mantido).
+Atualizar todos os hooks em `src/hooks/**` e `src/hooks/admin/**` para usar `qk.*` — remover strings literais duplicadas. Nenhuma mudança de comportamento; apenas troca de literais por referências tipadas.
 
-## Execução — módulo a módulo
-Vou entregar em ondas, cada uma com service + hook + refactor de componente + typecheck:
+---
 
-1. Store/profile/subscription (`configuracoes`, `perfil`, `assinatura`, `onboarding`, `AppShell`, `StoreImage`).
-2. Products + Orders + Customers + Vendas (`produtos`, `pedidos`, `clientes`, `vendas`).
-3. Público + Auth + Minhas compras (`loja.$slug`, `auth`, `entrar`, `minhas-compras`, `__root` limpeza).
-4. Admin (`admin/dashboard`, `admin/lojistas`, `admin/lojistas.$id`, `admin/campanhas`, `admin/equipe`, `admin/trial`, `AdminShell`).
+## 2. Auditoria de chamadas diretas ao Supabase em componentes
 
-Cada onda faz `tsgo` para garantir zero regressão de tipos antes de seguir.
+Rodar `rg -n "from '@/integrations/supabase/client'" src/components src/routes` e `rg -n "supabase\.(from|rpc|auth|storage|channel)" src/components src/routes` para identificar violações. Para cada ocorrência remanescente:
+
+- Mover para o service correspondente.
+- Expor via hook em `src/hooks/**`.
+- Substituir no componente.
+
+Documentar exceções legítimas (ex.: `hooks/use-session.ts`, `auth-middleware`, arquivos gerados) num comentário no topo de `queryKeys.ts` ou em `AGENTS.md`.
+
+---
+
+## 3. Testes unitários (Vitest)
+
+Setup: `tests/setup.ts` com mock global de `@/integrations/supabase/client` usando um builder encadeável (`from().select().eq().maybeSingle()` etc.) que retorna dados controlados por teste.
+
+Suítes (cobertura de services + hooks principais):
+
+- `tests/services/dashboardService.test.ts` — `getOrdersSince`, `getTopItemsSince`, filtros de `store_id`.
+- `tests/services/ordersService.test.ts` — `createQuickSale` (rpc), `listActiveOrders`, `updateOrder`.
+- `tests/services/productsService.test.ts` — `listProducts`, `upsertProduct`, `setProductActive`.
+- `tests/services/customersService.test.ts` — `listStoreCustomers`, `deleteCustomer`.
+- `tests/services/publicStoreService.test.ts` — `createPublicOrder` (rpc).
+- `tests/services/authService.test.ts` — sign in/out/update.
+
+Hooks (com `QueryClientProvider` de teste):
+
+- `tests/hooks/useDashboard.test.ts` — verifica agrupamento por dia/semana/mês, cálculo de `revenueMonthTotal`, `topProduct`.
+- `tests/hooks/useOrders.test.ts` — `useCreateQuickSale` invalida `products` e `quick-sales`.
+- `tests/hooks/useProducts.test.ts` — invalidação em upsert.
+- `tests/hooks/useCustomers.test.ts` — update/delete invalidam `customers`.
+
+Adicionar script `test:unit` em `package.json` se ausente.
+
+---
+
+## 4. Teste E2E (Playwright via shell)
+
+`tests/e2e/loja-pedido-minhas-compras.spec.ts` executado com o dev server já rodando em `localhost:8080`.
+
+Fluxo:
+
+1. Seed via SQL de teste (migration idempotente `tests/e2e/seed.sql` aplicada com `psql`/`supabase--read_query` ou via service role) — cria loja de teste, produto ativo, usuário customer.
+2. Login como customer (usa `LOVABLE_BROWSER_SUPABASE_*` se disponível; senão, sign-in via UI).
+3. Navegar até `/loja/<slug>`, adicionar produto ao carrinho, confirmar pedido.
+4. Verificar toast/confirmação de pedido criado.
+5. Navegar para `/minhas-compras` e validar que o pedido aparece.
+6. Simular atualização em tempo real: outro contexto (service role) altera `status` do pedido → confirmar que a UI reflete via subscription (aguardar seletor com novo status; timeout curto).
+7. Screenshots em cada etapa em `/tmp/browser/e2e/`.
+
+O teste é opt-in (não bloqueia CI se secrets ausentes) — pular com `test.skip` quando `LOVABLE_BROWSER_AUTH_STATUS !== 'injected'`.
+
+---
 
 ## Detalhes técnicos
-- Services são módulos puros: `import { supabase } from "@/integrations/supabase/client"`, funções `async` tipadas retornando dados já desembrulhados (`.data`), lançando em `error` quando aplicável para o hook tratar.
-- Hooks: `useQuery({ queryKey, queryFn: () => service.fn(args), enabled })` e `useMutation({ mutationFn, onSuccess: invalidate })`. QueryKeys mantidas idênticas às atuais para não invalidar cache cruzada em outros pontos.
-- Realtime: `subscribeXxx(storeId, onChange) => unsubscribe`, consumido em `useEffect` dentro do hook agregador correspondente.
-- Não vou tocar em `integrations/supabase/*` (auto-gen/infra) nem nos guards de rota (`_authenticated/route.tsx`, `admin/route.tsx`) que usam `supabase.auth.getUser()` legitimamente como parte do gate.
 
-## Entregável final
-Ao concluir, relatório com: componentes refatorados, services criados, hooks criados, estrutura final de pastas, e observações sobre qualquer arquivo intencionalmente não movido (auto-gen ou guards).
+- Sem mudanças em SQL, RLS ou UI.
+- `queryKeys.ts` tipado com `as const` para inferência.
+- Mocks de Supabase compartilhados em `tests/helpers/supabaseMock.ts`.
+- `tsgo --noEmit` + `bunx vitest run` como verificação final.
+- Playwright em `tests/e2e/` executado manualmente (`bunx playwright test tests/e2e` ou script dedicado); não integrado ao `vitest`.
+
+---
+
+## Entregáveis
+
+1. `src/lib/queryKeys.ts` + refatoração dos ~14 hooks.
+2. Relatório de auditoria (chat) + correções pontuais se encontradas.
+3. ~10 arquivos de teste unitário + helpers de mock.
+4. 1 spec E2E + seed.
+5. Scripts `test:unit` e `test:e2e` em `package.json`.
+
+Confirma para eu executar?

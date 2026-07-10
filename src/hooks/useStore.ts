@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   getMyStoreShell,
   getMyStoreFull,
@@ -11,27 +12,27 @@ import {
 } from "@/services/storeService";
 
 export function useMyStoreShell() {
-  return useQuery({ queryKey: ["my-store"], queryFn: getMyStoreShell });
+  return useQuery({ queryKey: qk.store.mine, queryFn: getMyStoreShell });
 }
 
 export function useMyStoreFull() {
-  return useQuery({ queryKey: ["my-store-full"], queryFn: getMyStoreFull });
+  return useQuery({ queryKey: qk.store.full, queryFn: getMyStoreFull });
 }
 
 export function useMyStoreSubscription() {
   return useQuery({
-    queryKey: ["my-store-subscription"],
+    queryKey: qk.store.subscription,
     queryFn: getMyStoreSubscription,
   });
 }
 
 export function useMyStoreExists() {
-  return useQuery({ queryKey: ["my-store-exists"], queryFn: getMyStoreExists });
+  return useQuery({ queryKey: qk.store.exists, queryFn: getMyStoreExists });
 }
 
 export function useProductsCount(storeId: string | null | undefined) {
   return useQuery({
-    queryKey: ["products-count", storeId],
+    queryKey: qk.store.productsCount(storeId),
     enabled: !!storeId,
     queryFn: () => getProductsCount(storeId!),
   });
@@ -44,10 +45,7 @@ export function useUpdateStore() {
       id: string;
       patch: Parameters<typeof updateStore>[1];
     }) => updateStore(payload.id, payload.patch),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-store-full"] });
-      qc.invalidateQueries({ queryKey: ["my-store"] });
-    },
+    onSuccess: () => invalidate.storeFull(qc),
   });
 }
 
@@ -56,7 +54,7 @@ export function useToggleStoreOpen() {
   return useMutation({
     mutationFn: (payload: { id: string; isOpen: boolean }) =>
       updateStore(payload.id, { is_open: payload.isOpen }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-store-full"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.store.full }),
   });
 }
 
@@ -65,7 +63,7 @@ export function useUploadStoreAsset() {
   return useMutation({
     mutationFn: (payload: { storeId: string; file: File; kind: "logo" | "cover" }) =>
       uploadStoreAsset(payload.storeId, payload.file, payload.kind),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["my-store-full"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.store.full }),
   });
 }
 

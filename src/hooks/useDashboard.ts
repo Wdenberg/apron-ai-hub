@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   getMyStore,
   getOrdersSince,
@@ -50,7 +51,7 @@ function labelKey(key: string, gran: "day" | "week" | "month"): string {
 
 export function useMyStore() {
   return useQuery({
-    queryKey: ["my-store"],
+    queryKey: qk.store.mine,
     queryFn: getMyStore,
   });
 }
@@ -73,7 +74,7 @@ export function useDashboard(days: number) {
   const { data: store } = useMyStore();
 
   const query = useQuery<DashboardData>({
-    queryKey: ["dashboard", store?.id, days],
+    queryKey: qk.dashboard.byStore(store?.id, days),
     enabled: !!store?.id,
     queryFn: async () => {
       const start = startOfDay(new Date());
@@ -177,7 +178,7 @@ export function useDashboard(days: number) {
   useEffect(() => {
     if (!store?.id) return;
     const unsubscribe = subscribeToStoreOrders(store.id, () => {
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      invalidate.dashboard(qc);
     });
     return unsubscribe;
   }, [store?.id, qc]);

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   listStoreCustomers,
   listCustomerOrders,
@@ -8,7 +9,7 @@ import {
 
 export function useCustomers(storeId: string | null | undefined) {
   return useQuery({
-    queryKey: ["customers", storeId],
+    queryKey: qk.customers.byStore(storeId),
     enabled: !!storeId,
     queryFn: () => listStoreCustomers(storeId!),
   });
@@ -16,7 +17,7 @@ export function useCustomers(storeId: string | null | undefined) {
 
 export function useCustomerOrders(customerId: string | null | undefined) {
   return useQuery({
-    queryKey: ["customer-orders", customerId],
+    queryKey: qk.customers.orders(customerId),
     enabled: !!customerId,
     queryFn: () => listCustomerOrders(customerId!),
   });
@@ -27,7 +28,7 @@ export function useUpdateCustomer() {
   return useMutation({
     mutationFn: (payload: { id: string; name: string; whatsapp: string }) =>
       updateCustomer(payload.id, { name: payload.name, whatsapp: payload.whatsapp }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: () => invalidate.customers(qc),
   });
 }
 
@@ -35,6 +36,6 @@ export function useDeleteCustomer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteCustomer(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: () => invalidate.customers(qc),
   });
 }
