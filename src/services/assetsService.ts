@@ -31,3 +31,26 @@ export async function uploadAsset(
     });
   if (error) throw error;
 }
+
+/**
+ * Remove one or more objects from the store-assets bucket.
+ * Silently ignores paths that no longer exist (already removed).
+ * Throws for any other storage error so callers can abort transactionally.
+ */
+export async function deleteAssets(paths: string[]): Promise<void> {
+  const valid = paths.filter(
+    (p): p is string => !!p && !p.startsWith("http"),
+  );
+  if (!valid.length) return;
+  const { error } = await supabase.storage.from("store-assets").remove(valid);
+  if (error) {
+    // "Object not found" / 404 → already gone; treat as success.
+    const msg = (error as { message?: string }).message ?? "";
+    if (/not.?found/i.test(msg) || /does not exist/i.test(msg)) {
+      // fall through
+    } else {
+      throw error;
+    }
+  }
+  for (const p of valid) cache.delete(p);
+}
