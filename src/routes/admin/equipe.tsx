@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { useAdminTeam, useInviteAdmin } from "@/hooks/admin/useAdminTeam";
+import {
+  useAdminTeam,
+  useInviteAdmin,
+  useCreateAdmin,
+} from "@/hooks/admin/useAdminTeam";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useState } from "react";
 import { ShieldCheck, Mail, UserPlus } from "lucide-react";
-import { adminCreateAdmin } from "@/lib/admin-team.functions";
 
 export const Route = createFileRoute("/admin/equipe")({
   head: () => ({ meta: [{ title: "Equipe — Admin ProntoPede" }] }),
@@ -16,10 +17,8 @@ export const Route = createFileRoute("/admin/equipe")({
 });
 
 function EquipePage() {
-  const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [createForm, setCreateForm] = useState({ email: "", password: "", full_name: "" });
-  const createAdminFn = useServerFn(adminCreateAdmin);
 
   const team = useAdminTeam();
   const inviteBase = useInviteAdmin();
@@ -35,15 +34,18 @@ function EquipePage() {
       }),
   };
 
-  const createAdmin = useMutation({
-    mutationFn: async () => createAdminFn({ data: createForm }),
-    onSuccess: (res) => {
-      toast.success(res.created ? "Admin criado — já pode entrar com e-mail e senha" : "Usuário existente promovido a admin");
-      setCreateForm({ email: "", password: "", full_name: "" });
-      qc.invalidateQueries({ queryKey: ["admin", "team"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const createAdminMut = useCreateAdmin();
+  const createAdmin = {
+    isPending: createAdminMut.isPending,
+    mutate: () =>
+      createAdminMut.mutate(createForm, {
+        onSuccess: (res) => {
+          toast.success(res.created ? "Admin criado — já pode entrar com e-mail e senha" : "Usuário existente promovido a admin");
+          setCreateForm({ email: "", password: "", full_name: "" });
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   return (
     <AdminShell title="Equipe de admins">
