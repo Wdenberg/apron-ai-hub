@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -11,10 +11,9 @@ import {
   X,
   Store,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
+import { useSignOut } from "@/hooks/useAuth";
 
 const NAV = [
   { to: "/admin/dashboard", label: "Visão geral", icon: LayoutDashboard },
@@ -25,19 +24,11 @@ const NAV = [
 ] as const;
 
 export function AdminShell({ children, title }: { children: ReactNode; title?: string }) {
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const qc = useQueryClient();
+  const signOut = useSignOut();
 
   useEffect(() => setOpen(false), [pathname]);
-
-  async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut({ scope: "global" });
-    navigate({ to: "/auth", replace: true });
-  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
