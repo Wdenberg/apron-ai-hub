@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type ReactElement } from "react";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -49,7 +49,7 @@ function CashRegister({ className }: { className?: string }) {
 type NavItem = {
   to: string;
   label: string;
-  icon: LucideIcon | ((p: { className?: string }) => JSX.Element);
+  icon: LucideIcon | ((p: { className?: string }) => ReactElement);
 };
 
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
