@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   useAdminStores,
   useSetSubscriptionStatus,
   useActivateWithPlan,
+  useCreateLojista,
 } from "@/hooks/admin/useAdminStores";
 import { AdminShell } from "@/components/AdminShell";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { z } from "zod";
-import { adminCreateLojista } from "@/lib/admin-lojista.functions";
 
 export const Route = createFileRoute("/admin/lojistas")({
   head: () => ({ meta: [{ title: "Lojistas — Admin ProntoPede" }] }),
