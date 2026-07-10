@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useCustomers";
 import { formatBRL } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { formatPhoneBR, formatProperName } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,13 +37,6 @@ export const Route = createFileRoute("/_authenticated/clientes")({
 });
 
 import type { Customer } from "@/services/customersService";
-
-function formatPhone(digits: string): string {
-  const s = digits.replace(/^55/, "");
-  if (s.length === 11) return `(${s.slice(0, 2)}) ${s.slice(2, 7)}-${s.slice(7)}`;
-  if (s.length === 10) return `(${s.slice(0, 2)}) ${s.slice(2, 6)}-${s.slice(6)}`;
-  return digits;
-}
 
 function CustomersPage() {
   const [query, setQuery] = useState("");
@@ -112,15 +106,15 @@ function CustomersPage() {
                 className="grid grid-cols-[1fr_auto_auto_auto] md:grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-4 py-3 items-center border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors"
               >
                 <div className="min-w-0">
-                  <div className="font-medium truncate">{c.name}</div>
-                  <div className="text-xs text-muted-foreground md:hidden">{formatPhone(c.whatsapp)}</div>
+                  <div className="font-medium truncate">{formatProperName(c.name)}</div>
+                  <div className="text-xs text-muted-foreground md:hidden">{formatPhoneBR(c.whatsapp)}</div>
                   {c.last_order_at && (
                     <div className="text-xs text-muted-foreground">
                       Último: {new Date(c.last_order_at).toLocaleDateString("pt-BR")}
                     </div>
                   )}
                 </div>
-                <div className="hidden md:block text-sm">{formatPhone(c.whatsapp)}</div>
+                <div className="hidden md:block text-sm">{formatPhoneBR(c.whatsapp)}</div>
                 <div className="text-right font-semibold">{c.total_orders}</div>
                 <div className="text-right font-semibold">{formatBRL(c.total_spent)}</div>
                 <div className="flex gap-1 justify-end">
@@ -139,7 +133,7 @@ function CustomersPage() {
                     title="Abrir no WhatsApp"
                   >
                     <a
-                      href={buildWhatsAppUrl(c.whatsapp, `Olá ${c.name}!`)}
+                      href={buildWhatsAppUrl(c.whatsapp, `Olá ${formatProperName(c.name)}!`)}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -195,7 +189,7 @@ function CustomersPage() {
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir {deleting?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir {formatProperName(deleting?.name)}?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleting && deleting.total_orders > 0 ? (
                 <>
@@ -241,8 +235,8 @@ function EditCustomerDialog({
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   if (customer && !name && !whatsapp) {
-    setName(customer.name);
-    setWhatsapp(customer.whatsapp);
+    setName(formatProperName(customer.name));
+    setWhatsapp(formatPhoneBR(customer.whatsapp));
   }
   function close() {
     setName("");
@@ -300,7 +294,7 @@ function CustomerOrdersDialog({
     <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Histórico — {customer?.name}</DialogTitle>
+          <DialogTitle>Histórico — {formatProperName(customer?.name)}</DialogTitle>
         </DialogHeader>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>

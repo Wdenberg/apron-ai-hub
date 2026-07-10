@@ -13,6 +13,7 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { formatPhoneBR, formatProperName } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -246,7 +247,7 @@ function OrdersPage() {
                               aria-label="Selecionar para imprimir"
                             />
                             <div className="font-semibold text-sm truncate">
-                              #{o.order_number} · {o.customer_name}
+                              #{o.order_number} · {formatProperName(o.customer_name)}
                             </div>
                           </div>
                           <div className="text-primary font-bold text-sm">
@@ -282,7 +283,7 @@ function OrdersPage() {
                             <a
                               href={buildWhatsAppUrl(
                                 o.customer_whatsapp,
-                                `Olá ${o.customer_name}! Sobre seu pedido #${o.order_number}...`,
+                                `Olá ${formatProperName(o.customer_name)}! Sobre seu pedido #${o.order_number}...`,
                               )}
                               target="_blank"
                               rel="noreferrer"
@@ -446,11 +447,11 @@ function PrintReceipt({
       </div>
       <hr />
       <div>
-        <strong>Cliente:</strong> {order.customer_name}
+        <strong>Cliente:</strong> {formatProperName(order.customer_name)}
       </div>
       {order.customer_whatsapp && (
         <div>
-          <strong>Tel:</strong> {order.customer_whatsapp}
+          <strong>Tel:</strong> {formatPhoneBR(order.customer_whatsapp)}
         </div>
       )}
       <hr />

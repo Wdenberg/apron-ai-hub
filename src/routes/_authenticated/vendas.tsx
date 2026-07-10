@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { useMyStoreShell } from "@/hooks/useStore";
 import { useAvailableProducts } from "@/hooks/useProducts";
+import { formatPhoneBR, formatProperName } from "@/lib/formatters";
 import {
   useQuickSales,
   useCreateQuickSale,
@@ -277,9 +278,9 @@ function VendasPage() {
                   return (
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-4 py-2 font-medium">#{s.order_number}</td>
-                    <td className="px-4 py-2">{s.customer_name}</td>
+                    <td className="px-4 py-2">{formatProperName(s.customer_name)}</td>
                     <td className="px-4 py-2 text-muted-foreground">
-                      {s.customer_whatsapp ?? "—"}
+                      {s.customer_whatsapp ? formatPhoneBR(s.customer_whatsapp) : "—"}
                     </td>
                     <td className="px-4 py-2 max-w-[220px] truncate" title={label}>
                       {label}
