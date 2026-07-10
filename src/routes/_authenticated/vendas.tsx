@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { formatBRL } from "@/lib/format";
 import { toast } from "sonner";
-import { Loader2, Plus, Receipt } from "lucide-react";
+import { Download, Loader2, Plus, Receipt, Search } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type PaymentMethod = Database["public"]["Enums"]["payment_method"];
@@ -68,6 +68,7 @@ type Sale = {
   notes: string | null;
   order_items: {
     quantity: number;
+    unit_price: number;
     products: { name: string } | null;
   }[];
 };
@@ -97,6 +98,9 @@ const schema = z.object({
 function VendasPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [days, setDays] = useState<number>(30);
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -120,21 +124,129 @@ function VendasPage() {
   });
 
   const { data: sales } = useQuery({
-    queryKey: ["quick-sales", store?.id],
+    queryKey: ["quick-sales", store?.id, days],
     enabled: !!store?.id,
     queryFn: async () => {
+      const start = new Date();
+      start.setDate(start.getDate() - (days - 1));
+      start.setHours(0, 0, 0, 0);
       const { data } = await supabase
         .from("orders")
         .select(
-          "id, order_number, customer_name, customer_whatsapp, total, payment, created_at, notes, order_items(quantity, products(name))",
+          "id, order_number, customer_name, customer_whatsapp, total, payment, created_at, notes, order_items(quantity, unit_price, products(name))",
         )
         .eq("store_id", store!.id)
         .eq("type", "presencial")
+        .gte("created_at", start.toISOString())
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(500);
       return (data ?? []) as Sale[];
     },
   });
+
+  // Realtime updates
+  useEffect(() => {
+    if (!store?.id) return;
+    const channel = supabase
+      .channel(`orders-vendas-${store.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `store_id=eq.${store.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["quick-sales"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [store?.id, qc]);
+
+  const filteredSales = useMemo(() => {
+    const list = sales ?? [];
+    const q = search.trim().toLowerCase();
+    return list.filter((s) => {
+      if (paymentFilter !== "all" && s.payment !== paymentFilter) return false;
+      if (!q) return true;
+      const inName = s.customer_name?.toLowerCase().includes(q);
+      const inPhone = (s.customer_whatsapp ?? "").toLowerCase().includes(q);
+      const inProduct = (s.order_items ?? []).some((it) =>
+        (it.products?.name ?? "").toLowerCase().includes(q),
+      );
+      return inName || inPhone || inProduct;
+    });
+  }, [sales, paymentFilter, search]);
+
+  function exportCsv() {
+    const rows = filteredSales;
+    if (!rows.length) {
+      toast.error("Nenhuma venda para exportar");
+      return;
+    }
+    const headers = [
+      "Data",
+      "Cliente",
+      "Telefone",
+      "Produto",
+      "Quantidade",
+      "Valor unitário",
+      "Valor total",
+      "Pagamento",
+      "Observações",
+    ];
+    const esc = (v: string | number | null | undefined) => {
+      const s = v == null ? "" : String(v);
+      if (/[";\n,]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines: string[] = [headers.join(";")];
+    rows.forEach((s) => {
+      const items = s.order_items ?? [];
+      const date = new Date(s.created_at).toLocaleString("pt-BR");
+      const qty = items.reduce((a, it) => a + it.quantity, 0);
+      const unit =
+        items.length === 1
+          ? formatBRL(items[0].unit_price)
+          : formatBRL(qty > 0 ? Number(s.total) / qty : 0);
+      const productLabel = items.length
+        ? items
+            .map((it) => `${it.quantity}x ${it.products?.name ?? "Item"}`)
+            .join(" | ")
+        : "";
+      lines.push(
+        [
+          date,
+          s.customer_name,
+          s.customer_whatsapp ?? "",
+          productLabel,
+          qty,
+          unit,
+          formatBRL(Number(s.total)),
+          PAYMENT_LABELS[s.payment] ?? s.payment,
+          s.notes ?? "",
+        ]
+          .map(esc)
+          .join(";"),
+      );
+    });
+    const csv = "\ufeff" + lines.join("\n");
+    const today = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vendas-rapidas-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} venda(s) exportada(s)`);
+  }
 
   return (
     <AppShell>
@@ -147,24 +259,73 @@ function VendasPage() {
             Registre uma venda presencial em poucos cliques.
           </p>
         </div>
-        <Button
-          onClick={() => setOpen(true)}
-          disabled={!store?.id}
-          className="w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Venda Rápida
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={exportCsv}
+            disabled={!filteredSales.length}
+            className="w-full sm:w-auto"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+          <Button
+            onClick={() => setOpen(true)}
+            disabled={!store?.id}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Venda Rápida
+          </Button>
+        </div>
       </div>
 
-      {!sales?.length ? (
+      <div className="mb-4 grid gap-2 sm:grid-cols-3">
+        <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Últimos 7 dias</SelectItem>
+            <SelectItem value="30">Últimos 30 dias</SelectItem>
+            <SelectItem value="90">Últimos 90 dias</SelectItem>
+            <SelectItem value="365">Último ano</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pagamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os pagamentos</SelectItem>
+            {PAYMENT_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cliente, telefone ou produto"
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      {!filteredSales.length ? (
         <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center">
           <div className="mx-auto h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
             <Receipt className="h-6 w-6 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg">Nenhuma venda presencial ainda</h3>
+          <h3 className="font-semibold text-lg">
+            Nenhuma venda encontrada
+          </h3>
           <p className="text-muted-foreground text-sm mt-1">
-            Clique em "Nova Venda Rápida" para registrar a primeira.
+            Ajuste os filtros ou registre uma nova venda rápida.
           </p>
         </div>
       ) : (
@@ -183,7 +344,7 @@ function VendasPage() {
                 </tr>
               </thead>
               <tbody>
-                {sales.map((s) => {
+                {filteredSales.map((s) => {
                   const items = s.order_items ?? [];
                   const label = items.length
                     ? items
