@@ -1,12 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useSegmentStores,
   useCampaigns,
-  listCampaignRecipients,
+  useSendCampaign,
   markRecipientOpened,
 } from "@/hooks/admin/useAdminCampaigns";
-import { createCampaign } from "@/services/admin/adminCampaignsService";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +29,6 @@ const SEGMENTS = [
 ];
 
 function CampanhasPage() {
-  const qc = useQueryClient();
   const [segment, setSegment] = useState("trial");
   const [message, setMessage] = useState("Olá {{nome_loja}}! Aqui é da ProntoPede. Como está sua experiência?");
   const [campaignId, setCampaignId] = useState<string | null>(null);
@@ -39,33 +36,35 @@ function CampanhasPage() {
 
   const recipients = useSegmentStores(segment);
   const history = useCampaigns();
-
-  const create = useMutation({
-    mutationFn: async () => {
-      const recs = (recipients.data ?? []).map((r) => ({
-        store_id: r.store_id,
-        message: message.replace(/\{\{nome_loja\}\}/g, r.name).replace(/\{\{dias_restantes\}\}/g, String(r.trial_days_left)),
-      }));
-      const id = await createCampaign({
-        segment,
-        messageTemplate: message,
-        recipients: recs,
-      });
-      return { id, recipients: recs };
-    },
-    onSuccess: async (result) => {
-      const data = await listCampaignRecipients(result.id);
-      const enriched = data.map((row) => {
-        const rec = (recipients.data ?? []).find((r) => r.store_id === row.store_id);
-        return { id: row.id, name: rec?.name ?? "Loja", whatsapp: rec?.whatsapp ?? "", text: row.rendered_message };
-      });
-      setCampaignId(result.id);
-      setSentRecipients(enriched);
-      qc.invalidateQueries({ queryKey: ["admin", "campaigns"] });
-      toast.success(`Campanha criada com ${enriched.length} destinatários`);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const sendMut = useSendCampaign();
+  const create = {
+    isPending: sendMut.isPending,
+    mutate: () =>
+      sendMut.mutate(
+        {
+          segment,
+          messageTemplate: message,
+          audience: recipients.data ?? [],
+        },
+        {
+          onSuccess: (result) => {
+            const enriched = result.recipients.map((row) => {
+              const rec = (recipients.data ?? []).find((r) => r.store_id === row.store_id);
+              return {
+                id: row.id,
+                name: rec?.name ?? "Loja",
+                whatsapp: rec?.whatsapp ?? "",
+                text: row.rendered_message,
+              };
+            });
+            setCampaignId(result.id);
+            setSentRecipients(enriched);
+            toast.success(`Campanha criada com ${enriched.length} destinatários`);
+          },
+          onError: (e: Error) => toast.error(e.message),
+        },
+      ),
+  };
 
   return (
     <AdminShell title="Campanhas WhatsApp">
