@@ -325,6 +325,7 @@ function ProductsPage() {
             if (!v) {
               setEditing(null);
               setPhotoPath(null);
+              resetPhotoPicker(null);
               setCategoryValue("");
               setActiveValue(true);
             }
@@ -337,21 +338,54 @@ function ProductsPage() {
               <div>
                 <Label className="mb-1.5 block">Foto do produto</Label>
                 <div className="flex items-center gap-4">
-                  {photoPath ? (
-                    <StoreImage path={photoPath} alt="Produto" className="h-20 w-20 rounded-lg object-cover border border-border" fallbackClassName="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center" />
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="Pré-visualização"
+                      className="h-20 w-20 rounded-lg object-cover border border-border"
+                    />
+                  ) : photoPath ? (
+                    <StoreImage
+                      path={photoPath}
+                      alt="Produto"
+                      className="h-20 w-20 rounded-lg object-cover border border-border"
+                      fallbackClassName="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center"
+                    />
                   ) : (
                     <div className="h-20 w-20 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground">
                       <ImagePlus className="h-6 w-6" />
                     </div>
                   )}
-                  <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-md border border-border bg-background hover:bg-accent cursor-pointer">
-                    {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {photoPath ? "Trocar" : "Enviar"}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); e.currentTarget.value = ""; }} />
-                  </label>
-                  {photoPath && (
-                    <button type="button" className="text-xs text-muted-foreground hover:text-destructive" onClick={() => setPhotoPath(null)}>
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <label className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-md border border-border bg-background hover:bg-accent cursor-pointer w-fit">
+                      <Upload className="h-4 w-4" />
+                      {photoPreview || photoPath ? "Trocar" : "Enviar"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handlePhoto(f);
+                          e.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    {photoFile && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[220px]">
+                        {photoFile.name}
+                      </span>
+                    )}
+                    <span className="text-[11px] text-muted-foreground">
+                      JPG, PNG ou WEBP · máx. 5MB
+                    </span>
+                  </div>
+                  {(photoPreview || photoPath) && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                      onClick={clearPhoto}
+                    >
                       Remover
                     </button>
                   )}
@@ -408,7 +442,12 @@ function ProductsPage() {
                 />
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={upsert.isPending}>{upsert.isPending ? "Salvando..." : "Salvar"}</Button>
+                <Button type="submit" disabled={upsert.isPending || uploadingPhoto}>
+                  {(upsert.isPending || uploadingPhoto) && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
+                  {uploadingPhoto ? "Enviando..." : upsert.isPending ? "Salvando..." : "Salvar"}
+                </Button>
               </div>
             </form>
           </DialogContent>
