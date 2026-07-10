@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { MessageCircle, ClipboardList, XCircle, Pencil, Printer } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
 
 type Status = Database["public"]["Enums"]["order_status"];
@@ -75,10 +76,23 @@ function OrdersPage() {
   const [editing, setEditing] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState<Order | null>(null);
   const [payAsking, setPayAsking] = useState<Order | null>(null);
-  const [printData, setPrintData] = useState<{
-    order: Order;
-    items: { name: string; quantity: number }[];
-  } | null>(null);
+  const [printBatch, setPrintBatch] = useState<
+    { order: Order; items: { name: string; quantity: number }[] }[] | null
+  >(null);
+  const [printWidth, setPrintWidth] = useState<"58" | "80">("80");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined"
+      ? (window.localStorage.getItem("pp_print_width") as "58" | "80" | null)
+      : null;
+    if (saved === "58" || saved === "80") setPrintWidth(saved);
+  }, []);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("pp_print_width", printWidth);
+    }
+  }, [printWidth]);
 
   const { data: store } = useQuery({
     queryKey: ["my-store"],
@@ -130,33 +144,93 @@ function OrdersPage() {
     updateOrder.mutate({ id: o.id, status: next });
   }
 
-  async function handlePrint(o: Order) {
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function printOrders(list: Order[]) {
+    if (!list.length) return;
+    const ids = list.map((o) => o.id);
     const { data, error } = await supabase
       .from("order_items")
-      .select("quantity, products(name)")
-      .eq("order_id", o.id);
+      .select("order_id, quantity, products(name)")
+      .in("order_id", ids);
     if (error) {
       toast.error("Erro ao carregar itens do pedido");
       return;
     }
-    const items = (data ?? []).map((r: { quantity: number; products: { name: string } | null }) => ({
-      name: r.products?.name ?? "Item",
-      quantity: r.quantity,
-    }));
-    setPrintData({ order: o, items });
-    // Wait for React to render the hidden receipt before opening the print dialog.
-    await new Promise((r) => setTimeout(r, 50));
+    const map = new Map<string, { name: string; quantity: number }[]>();
+    (data ?? []).forEach(
+      (r: { order_id: string; quantity: number; products: { name: string } | null }) => {
+        const arr = map.get(r.order_id) ?? [];
+        arr.push({ name: r.products?.name ?? "Item", quantity: r.quantity });
+        map.set(r.order_id, arr);
+      },
+    );
+    const batch = list.map((o) => ({ order: o, items: map.get(o.id) ?? [] }));
+
+    // Inject dynamic @page rule matching the chosen thermal width.
+    const widthMm = printWidth === "58" ? 58 : 80;
+    const styleEl = document.createElement("style");
+    styleEl.setAttribute("data-print-page", "1");
+    styleEl.textContent = `@media print { @page { size: ${widthMm}mm auto; margin: 3mm; } }`;
+    document.head.appendChild(styleEl);
+
+    setPrintBatch(batch);
+    await new Promise((r) => setTimeout(r, 80));
     window.print();
-    setTimeout(() => setPrintData(null), 300);
+    setTimeout(() => {
+      setPrintBatch(null);
+      styleEl.remove();
+    }, 400);
+  }
+
+  async function printSelected() {
+    if (!orders || !selectedIds.size) return;
+    const list = orders.filter((o) => selectedIds.has(o.id));
+    await printOrders(list);
   }
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Pedidos</h1>
-        <p className="text-muted-foreground">
-          Atualize o status conforme o pedido evolui.
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Pedidos</h1>
+          <p className="text-muted-foreground">
+            Atualize o status conforme o pedido evolui.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="print-width" className="text-xs whitespace-nowrap">
+              Impressão
+            </Label>
+            <Select value={printWidth} onValueChange={(v) => setPrintWidth(v as "58" | "80")}>
+              <SelectTrigger id="print-width" className="h-9 w-full sm:w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="58">Térmica 58 mm</SelectItem>
+                <SelectItem value="80">Térmica 80 mm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!selectedIds.size}
+            onClick={printSelected}
+            className="whitespace-nowrap"
+          >
+            <Printer className="h-4 w-4 mr-1" />
+            Imprimir selecionados ({selectedIds.size})
+          </Button>
+        </div>
       </div>
 
       {!orders?.length ? (
@@ -198,8 +272,15 @@ function OrdersPage() {
                         className="rounded-xl bg-card border border-border p-3 shadow-sm"
                       >
                         <div className="flex items-center justify-between">
-                          <div className="font-semibold text-sm">
-                            #{o.order_number} · {o.customer_name}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Checkbox
+                              checked={selectedIds.has(o.id)}
+                              onCheckedChange={() => toggleSelected(o.id)}
+                              aria-label="Selecionar para imprimir"
+                            />
+                            <div className="font-semibold text-sm truncate">
+                              #{o.order_number} · {o.customer_name}
+                            </div>
                           </div>
                           <div className="text-primary font-bold text-sm">
                             {formatBRL(o.total)}
@@ -256,7 +337,7 @@ function OrdersPage() {
                             size="sm"
                             variant="ghost"
                             className="h-7 w-7 p-0"
-                            onClick={() => handlePrint(o)}
+                            onClick={() => printOrders([o])}
                             title="Imprimir comanda"
                           >
                             <Printer className="h-3.5 w-3.5" />
@@ -353,12 +434,17 @@ function OrdersPage() {
         }}
       />
 
-      {printData && (
-        <PrintReceipt
-          storeName={store?.name ?? ""}
-          order={printData.order}
-          items={printData.items}
-        />
+      {printBatch && (
+        <div className={`print-area w${printWidth}`}>
+          {printBatch.map(({ order, items }) => (
+            <PrintReceipt
+              key={order.id}
+              storeName={store?.name ?? ""}
+              order={order}
+              items={items}
+            />
+          ))}
+        </div>
       )}
     </AppShell>
   );
