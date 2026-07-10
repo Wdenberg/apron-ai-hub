@@ -399,18 +399,16 @@ function PrintReceipt({
       <hr />
       <div>
         {items.map((it, i) => (
-          <div key={i} className="row">
-            <span>
-              {it.quantity}x {it.name}
-            </span>
+          <div key={i} className="item">
+            {it.quantity}x {abbreviateName(it.name, 60)}
           </div>
         ))}
       </div>
       {order.notes && (
         <>
           <hr />
-          <div>
-            <strong>Obs:</strong> {order.notes}
+          <div className="notes">
+            <strong>Obs:</strong> {abbreviateName(order.notes, 240)}
           </div>
         </>
       )}
