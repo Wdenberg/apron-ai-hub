@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { uploadAsset } from "./assetsService";
+import { uploadAsset, deleteAssets } from "./assetsService";
 
 export type Product = {
   id: string;
@@ -76,10 +76,40 @@ export async function updateProductStock(id: string, stock: number) {
   if (error) throw error;
 }
 
-export async function deleteProducts(ids: string[]) {
-  if (!ids.length) return;
-  const { error } = await supabase.from("products").delete().in("id", ids);
-  if (error) throw error;
+export type DeleteTarget = { id: string; name?: string; photo_url: string | null };
+
+export type DeleteProductsResult = {
+  succeeded: string[];
+  failed: { id: string; name?: string; reason: string }[];
+};
+
+/**
+ * Deletes products transactionally per-item:
+ * 1) Remove photo from Storage (if any). If the file is already missing,
+ *    that's not an error.
+ * 2) Only after storage cleanup succeeds, delete the DB row.
+ * On failure at any step, that product is reported in `failed` and the DB
+ * row is preserved (no orphan files, no dangling references).
+ */
+export async function deleteProducts(
+  targets: DeleteTarget[],
+): Promise<DeleteProductsResult> {
+  const result: DeleteProductsResult = { succeeded: [], failed: [] };
+  for (const t of targets) {
+    try {
+      if (t.photo_url && !t.photo_url.startsWith("http")) {
+        await deleteAssets([t.photo_url]);
+      }
+      const { error } = await supabase.from("products").delete().eq("id", t.id);
+      if (error) throw error;
+      result.succeeded.push(t.id);
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      console.error("[deleteProducts] failed", { id: t.id, reason });
+      result.failed.push({ id: t.id, name: t.name, reason });
+    }
+  }
+  return result;
 }
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
