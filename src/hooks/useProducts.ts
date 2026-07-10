@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   listProducts,
   listAvailableProducts,
@@ -10,7 +11,7 @@ import {
 
 export function useProducts(storeId: string | null | undefined) {
   return useQuery({
-    queryKey: ["products", storeId],
+    queryKey: qk.products.byStore(storeId),
     enabled: !!storeId,
     queryFn: () => listProducts(storeId!),
   });
@@ -18,7 +19,7 @@ export function useProducts(storeId: string | null | undefined) {
 
 export function useAvailableProducts(storeId: string | null | undefined) {
   return useQuery({
-    queryKey: ["products-active", storeId],
+    queryKey: qk.products.activeByStore(storeId),
     enabled: !!storeId,
     queryFn: () => listAvailableProducts(storeId!),
   });
@@ -29,7 +30,7 @@ export function useUpsertProduct() {
   return useMutation({
     mutationFn: (payload: { row: ProductWriteRow; id?: string }) =>
       upsertProduct(payload.row, payload.id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => invalidate.products(qc),
   });
 }
 
@@ -38,7 +39,7 @@ export function useToggleProductActive() {
   return useMutation({
     mutationFn: (payload: { id: string; active: boolean }) =>
       setProductActive(payload.id, payload.active),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => invalidate.products(qc),
   });
 }
 
