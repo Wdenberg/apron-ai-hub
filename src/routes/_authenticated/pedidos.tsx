@@ -373,6 +373,10 @@ function PrintReceipt({
   order: Order;
   items: { name: string; quantity: number }[];
 }) {
+  function abbreviateName(text: string, max: number) {
+    const t = text.trim().replace(/\s+/g, " ");
+    return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+  }
   const dt = new Date(order.created_at).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
