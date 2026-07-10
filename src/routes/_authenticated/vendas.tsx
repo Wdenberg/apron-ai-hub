@@ -1,9 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMyStoreShell } from "@/hooks/useStore";
+import { useAvailableProducts } from "@/hooks/useProducts";
+import {
+  useQuickSales,
+  useCreateQuickSale,
+  useStoreOrdersRealtime,
+} from "@/hooks/useOrders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,9 +30,9 @@ import {
 import { formatBRL } from "@/lib/format";
 import { toast } from "sonner";
 import { Download, Loader2, Plus, Receipt, Search } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
-
-type PaymentMethod = Database["public"]["Enums"]["payment_method"];
+import type { PaymentMethod } from "@/services/ordersService";
+import type { ProductPickerRow as Product } from "@/services/productsService";
+import type { QuickSale as Sale } from "@/services/ordersService";
 
 export const Route = createFileRoute("/_authenticated/vendas")({
   head: () => ({ meta: [{ title: "Venda rápida — ProntoPede" }] }),
@@ -48,30 +53,6 @@ const PAYMENT_LABELS: Record<string, string> = Object.fromEntries(
 );
 PAYMENT_LABELS.cartao = "Cartão";
 PAYMENT_LABELS.nao_definido = "A definir";
-
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  active: boolean;
-};
-
-type Sale = {
-  id: string;
-  order_number: number | null;
-  customer_name: string;
-  customer_whatsapp: string | null;
-  total: number;
-  payment: PaymentMethod;
-  created_at: string;
-  notes: string | null;
-  order_items: {
-    quantity: number;
-    unit_price: number;
-    products: { name: string } | null;
-  }[];
-};
 
 const schema = z.object({
   customer_name: z.string().trim().min(2, "Informe o nome").max(80),
@@ -96,76 +77,15 @@ const schema = z.object({
 });
 
 function VendasPage() {
-  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [days, setDays] = useState<number>(30);
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
 
-  const { data: store } = useQuery({
-    queryKey: ["my-store"],
-    queryFn: async () =>
-      (await supabase.from("stores").select("id").maybeSingle()).data,
-  });
-
-  const { data: products } = useQuery({
-    queryKey: ["products-active", store?.id],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("id, name, price, stock, active")
-        .eq("store_id", store!.id)
-        .eq("active", true)
-        .gt("stock", 0)
-        .order("name");
-      return (data ?? []) as Product[];
-    },
-  });
-
-  const { data: sales } = useQuery({
-    queryKey: ["quick-sales", store?.id, days],
-    enabled: !!store?.id,
-    queryFn: async () => {
-      const start = new Date();
-      start.setDate(start.getDate() - (days - 1));
-      start.setHours(0, 0, 0, 0);
-      const { data } = await supabase
-        .from("orders")
-        .select(
-          "id, order_number, customer_name, customer_whatsapp, total, payment, created_at, notes, order_items(quantity, unit_price, products(name))",
-        )
-        .eq("store_id", store!.id)
-        .eq("type", "presencial")
-        .gte("created_at", start.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(500);
-      return (data ?? []) as Sale[];
-    },
-  });
-
-  // Realtime updates
-  useEffect(() => {
-    if (!store?.id) return;
-    const channel = supabase
-      .channel(`orders-vendas-${store.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `store_id=eq.${store.id}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ["quick-sales"] });
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [store?.id, qc]);
+  const { data: store } = useMyStoreShell();
+  const { data: products } = useAvailableProducts(store?.id);
+  const { data: sales } = useQuickSales(store?.id, days);
+  useStoreOrdersRealtime(store?.id, "orders-vendas", "quick-sales");
 
   const filteredSales = useMemo(() => {
     const list = sales ?? [];
