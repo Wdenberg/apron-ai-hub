@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { qk, invalidate } from "@/lib/queryKeys";
 import {
   listSegmentStores,
   listCampaigns,
@@ -11,14 +12,14 @@ import {
 
 export function useSegmentStores(segment: string) {
   return useQuery({
-    queryKey: ["admin", "segment", segment],
+    queryKey: qk.admin.segment(segment),
     queryFn: () => listSegmentStores(segment),
   });
 }
 
 export function useCampaigns() {
   return useQuery({
-    queryKey: ["admin", "campaigns"],
+    queryKey: qk.admin.campaigns,
     queryFn: listCampaigns,
   });
 }
@@ -27,7 +28,7 @@ export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createCampaign,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "campaigns"] }),
+    onSuccess: () => invalidate.adminCampaigns(qc),
   });
 }
 
@@ -60,6 +61,6 @@ export function useSendCampaign() {
       const recipients = await listCampaignRecipients(id);
       return { id, recipients };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "campaigns"] }),
+    onSuccess: () => invalidate.adminCampaigns(qc),
   });
 }

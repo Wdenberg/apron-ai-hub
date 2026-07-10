@@ -1,17 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { qk, invalidate } from "@/lib/queryKeys";
 import { listAdminTeam, inviteAdmin } from "@/services/admin/adminTeamService";
 import { adminCreateAdmin } from "@/lib/admin-team.functions";
 
 export function useAdminTeam() {
-  return useQuery({ queryKey: ["admin", "team"], queryFn: listAdminTeam });
+  return useQuery({ queryKey: qk.admin.team, queryFn: listAdminTeam });
 }
 
 export function useInviteAdmin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: inviteAdmin,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "team"] }),
+    onSuccess: () => invalidate.adminTeam(qc),
   });
 }
 
@@ -26,6 +27,6 @@ export function useCreateAdmin() {
   const createFn = useServerFn(adminCreateAdmin);
   return useMutation({
     mutationFn: (data: CreateAdminInput) => createFn({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "team"] }),
+    onSuccess: () => invalidate.adminTeam(qc),
   });
 }

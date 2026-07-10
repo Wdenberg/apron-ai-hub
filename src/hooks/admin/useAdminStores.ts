@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { qk, invalidate } from "@/lib/queryKeys";
 import { adminCreateLojista } from "@/lib/admin-lojista.functions";
 import {
   listAdminStores,
@@ -18,14 +19,14 @@ export function useAdminStores(filters: {
   search?: string;
 }) {
   return useQuery({
-    queryKey: ["admin", "stores", filters.status ?? "", filters.health ?? "", filters.search ?? ""],
+    queryKey: qk.admin.stores(filters),
     queryFn: () => listAdminStores(filters),
   });
 }
 
 export function useAdminStoreDetail(id: string) {
   return useQuery({
-    queryKey: ["admin", "store", id],
+    queryKey: qk.admin.storeDetail(id),
     queryFn: () => getAdminStoreDetail(id),
   });
 }
@@ -35,7 +36,7 @@ export function useSetSubscriptionStatus() {
   return useMutation({
     mutationFn: (payload: { id: string; status: string; reason?: string }) =>
       setSubscriptionStatus(payload.id, payload.status, payload.reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "stores"] }),
+    onSuccess: () => invalidate.adminStores(qc),
   });
 }
 
@@ -44,7 +45,7 @@ export function useActivateWithPlan() {
   return useMutation({
     mutationFn: (payload: { id: string; plan: SubscriptionPlan }) =>
       activateWithPlan(payload.id, payload.plan),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "stores"] }),
+    onSuccess: () => invalidate.adminStores(qc),
   });
 }
 
@@ -52,7 +53,7 @@ export function useExtendTrial(storeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (days: number) => extendTrial(storeId, days),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "store", storeId] }),
+    onSuccess: () => invalidate.adminStore(qc, storeId),
   });
 }
 
@@ -60,7 +61,7 @@ export function useAddAdminNote(storeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (note: string) => addAdminNote(storeId, note),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "store", storeId] }),
+    onSuccess: () => invalidate.adminStore(qc, storeId),
   });
 }
 
@@ -69,7 +70,7 @@ export function useSetSubscriptionStatusDetail(storeId: string) {
   return useMutation({
     mutationFn: (payload: { status: string; reason?: string }) =>
       setSubscriptionStatus(storeId, payload.status, payload.reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "store", storeId] }),
+    onSuccess: () => invalidate.adminStore(qc, storeId),
   });
 }
 
@@ -78,7 +79,7 @@ export function useRegisterChurn(storeId: string) {
   return useMutation({
     mutationFn: (payload: { reason: string; note?: string }) =>
       registerChurn(storeId, payload.reason, payload.note),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "store", storeId] }),
+    onSuccess: () => invalidate.adminStore(qc, storeId),
   });
 }
 
@@ -95,6 +96,6 @@ export function useCreateLojista() {
   const createFn = useServerFn(adminCreateLojista);
   return useMutation({
     mutationFn: (data: CreateLojistaInput) => createFn({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "stores"] }),
+    onSuccess: () => invalidate.adminStores(qc),
   });
 }
