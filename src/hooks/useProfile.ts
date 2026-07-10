@@ -44,3 +44,16 @@ export function useUploadAvatar() {
 }
 
 export { isPhoneTakenByOther };
+
+import { useMutation as _useMutation } from "@tanstack/react-query";
+
+export function useSaveMyPhone(userId: string | undefined) {
+  return _useMutation({
+    mutationFn: async (whatsapp: string) => {
+      if (!userId) throw new Error("Não autenticado");
+      const taken = await isPhoneTakenByOther(whatsapp, userId);
+      if (taken) throw new Error("Telefone já cadastrado em outra conta.");
+      await updateProfile(userId, { whatsapp });
+    },
+  });
+}
