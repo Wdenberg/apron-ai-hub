@@ -294,17 +294,7 @@ function CustomerOrdersDialog({
   customer: Customer | null;
   onClose: () => void;
 }) {
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["customer-orders", customer?.id],
-    enabled: !!customer,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_customer_orders" as never, {
-        _customer_id: customer!.id,
-      } as never);
-      if (error) throw error;
-      return (data ?? []) as CustomerOrder[];
-    },
-  });
+  const { data: orders = [], isLoading } = useCustomerOrders(customer?.id);
 
   return (
     <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
