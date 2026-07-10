@@ -40,7 +40,6 @@ const PLAN_LABEL: Record<Plan, string> = {
 };
 
 function LojistasPage() {
-  const qc = useQueryClient();
   const [status, setStatus] = useState<string>("");
   const [health, setHealth] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -69,18 +68,18 @@ function LojistasPage() {
       }),
   };
 
-  const createFn = useServerFn(adminCreateLojista);
-  const createMut = useMutation({
-    mutationFn: async (payload: z.infer<typeof createFormSchema>) => {
-      return await createFn({ data: payload });
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "stores"] });
-      setCreateOpen(false);
-      toast.success("Lojista criado com sucesso");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const createMutBase = useCreateLojista();
+  const createMut = {
+    isPending: createMutBase.isPending,
+    mutate: (payload: z.infer<typeof createFormSchema>) =>
+      createMutBase.mutate(payload, {
+        onSuccess: () => {
+          setCreateOpen(false);
+          toast.success("Lojista criado com sucesso");
+        },
+        onError: (e: Error) => toast.error(e.message),
+      }),
+  };
 
   function submitCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
