@@ -39,6 +39,11 @@ export async function updateUserPassword(password: string) {
   if (error) throw error;
 }
 
+export async function sendPasswordResetEmail(email: string, redirectTo: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
+}
+
 export function onAuthStateChange(
   cb: (event: string) => void,
 ) {

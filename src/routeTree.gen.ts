@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MinhasComprasRouteImport } from './routes/minhas-compras'
+import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
@@ -33,9 +35,19 @@ import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AdminLojistasIdRouteImport } from './routes/admin/lojistas.$id'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MinhasComprasRoute = MinhasComprasRouteImport.update({
   id: '/minhas-compras',
   path: '/minhas-compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsqueciSenhaRoute = EsqueciSenhaRouteImport.update({
+  id: '/esqueci-senha',
+  path: '/esqueci-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -154,7 +166,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -177,7 +191,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -203,7 +219,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/entrar': typeof EntrarRoute
+  '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -229,7 +247,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/entrar'
+    | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/assinatura'
     | '/clientes'
     | '/configuracoes'
@@ -252,7 +272,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/entrar'
+    | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/assinatura'
     | '/clientes'
     | '/configuracoes'
@@ -277,7 +299,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/entrar'
+    | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/_authenticated/assinatura'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
@@ -303,17 +327,33 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   EntrarRoute: typeof EntrarRoute
+  EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   MinhasComprasRoute: typeof MinhasComprasRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   LojaSlugRoute: typeof LojaSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/minhas-compras': {
       id: '/minhas-compras'
       path: '/minhas-compras'
       fullPath: '/minhas-compras'
       preLoaderRoute: typeof MinhasComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esqueci-senha': {
+      id: '/esqueci-senha'
+      path: '/esqueci-senha'
+      fullPath: '/esqueci-senha'
+      preLoaderRoute: typeof EsqueciSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -540,19 +580,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   EntrarRoute: EntrarRoute,
+  EsqueciSenhaRoute: EsqueciSenhaRoute,
   MinhasComprasRoute: MinhasComprasRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   LojaSlugRoute: LojaSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

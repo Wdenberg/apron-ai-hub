@@ -198,7 +198,12 @@ function CustomerAuth() {
                 <Input id="email" name="email" type="email" autoComplete="email" required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Senha</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <Link to="/esqueci-senha" className="text-xs text-primary hover:underline">
+                    Esqueci minha senha
+                  </Link>
+                </div>
                 <Input id="password" name="password" type="password" autoComplete="current-password" required />
               </div>
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
