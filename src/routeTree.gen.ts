@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as MinhasComprasRouteImport } from './routes/minhas-compras'
 import { Route as EsqueciSenhaRouteImport } from './routes/esqueci-senha'
 import { Route as EntrarRouteImport } from './routes/entrar'
@@ -34,6 +35,11 @@ import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AdminLojistasIdRouteImport } from './routes/admin/lojistas.$id'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MinhasComprasRoute = MinhasComprasRouteImport.update({
   id: '/minhas-compras',
   path: '/minhas-compras',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/esqueci-senha': typeof EsqueciSenhaRoute
   '/minhas-compras': typeof MinhasComprasRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/assinatura'
     | '/clientes'
     | '/configuracoes'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/assinatura'
     | '/clientes'
     | '/configuracoes'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/esqueci-senha'
     | '/minhas-compras'
+    | '/reset-password'
     | '/_authenticated/assinatura'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
@@ -317,11 +329,19 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   EsqueciSenhaRoute: typeof EsqueciSenhaRoute
   MinhasComprasRoute: typeof MinhasComprasRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   LojaSlugRoute: typeof LojaSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/minhas-compras': {
       id: '/minhas-compras'
       path: '/minhas-compras'
@@ -562,6 +582,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   EsqueciSenhaRoute: EsqueciSenhaRoute,
   MinhasComprasRoute: MinhasComprasRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   LojaSlugRoute: LojaSlugRoute,
 }
 export const routeTree = rootRouteImport
