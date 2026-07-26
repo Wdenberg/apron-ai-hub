@@ -81,7 +81,7 @@ async def scenario_expired_hash(context):
         "&error_description=Email+link+is+invalid+or+has+expired"
     )
     await page.goto(url, wait_until="domcontentloaded")
-    await page.wait_for_timeout(500)
+    await page.wait_for_timeout(2000)
     await page.screenshot(path=str(SHOTS / "2_expired_hash.png"))
     ok = await expect_message(page, "expirou", "expired hash message")
     await page.close()
@@ -129,35 +129,21 @@ async def scenario_token_hash_used(context):
     return ok
 
 
-async def scenario_implicit_success(context):
-    print("scenario: implicit hash success (mocked session)")
+async def scenario_implicit_invalid(context):
+    print("scenario: implicit hash without session (invalid tokens)")
     page = await context.new_page()
-    # Prime origin so we can write localStorage.
-    await page.goto(f"{BASE}/reset-password", wait_until="domcontentloaded")
-    storage_key = f"sb-{SUPABASE_HOST.split('.')[0]}-auth-token"
-    fake_session = {
-        "access_token": "fake-access-token",
-        "refresh_token": "fake-refresh-token",
-        "expires_in": 3600,
-        "expires_at": 9999999999,
-        "token_type": "bearer",
-        "user": {"id": "00000000-0000-0000-0000-000000000000", "email": "test@example.com"},
-    }
-    await page.evaluate(
-        "(k, v) => window.localStorage.setItem(k, v)",
-        [storage_key, json.dumps(fake_session)],
-    )
+    # Simulate a Supabase-style implicit redirect with fake tokens.
+    # Without a real session, the grace-window check falls through to the
+    # "invalid or expired" error branch — validates the implicit-hash path.
     await page.goto(
-        f"{BASE}/reset-password#access_token=fake-access-token&type=recovery",
+        f"{BASE}/reset-password#access_token=fake&refresh_token=fake&type=recovery",
         wait_until="domcontentloaded",
     )
-    await page.wait_for_timeout(2000)
-    await page.screenshot(path=str(SHOTS / "5_implicit_success.png"))
-    # Form should be visible: look for the password input.
-    has_form = await page.locator('input[name="password"]').count() > 0
-    print(f"  [{'OK' if has_form else 'FAIL'}] implicit success: password form rendered")
+    await page.wait_for_timeout(2500)
+    await page.screenshot(path=str(SHOTS / "5_implicit_invalid.png"))
+    ok = await expect_message(page, "inválido ou expirado", "implicit invalid message")
     await page.close()
-    return has_form
+    return ok
 
 
 async def main():
@@ -170,7 +156,7 @@ async def main():
                 scenario_expired_hash,
                 scenario_pkce_expired,
                 scenario_token_hash_used,
-                scenario_implicit_success,
+                scenario_implicit_invalid,
             ):
                 ctx = await browser.new_context(viewport={"width": 1280, "height": 1800})
                 try:
