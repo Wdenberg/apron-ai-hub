@@ -32,39 +32,95 @@ function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(true);
+
+  function mapAuthError(raw: string): string {
+    const s = raw.toLowerCase();
+    if (s.includes("expired")) return "Este link de recuperação expirou. Solicite um novo.";
+    if (s.includes("invalid") || s.includes("not found") || s.includes("otp"))
+      return "Link de recuperação inválido. Solicite um novo.";
+    if (s.includes("used")) return "Este link já foi utilizado. Solicite um novo.";
+    return raw;
+  }
 
   useEffect(() => {
-    // Supabase JS auto-processes the recovery token in the URL hash and
-    // fires a PASSWORD_RECOVERY event with a temporary session.
+    let cancelled = false;
+
+    // 1) Error carried in the URL hash (expired/invalid link from Supabase).
+    const hash = typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
+    const search = typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+    const hashParams = new URLSearchParams(hash);
+    const queryParams = new URLSearchParams(search);
+
+    const hashErr = hashParams.get("error_description") ?? hashParams.get("error");
+    if (hashErr) {
+      setError(mapAuthError(decodeURIComponent(hashErr.replace(/\+/g, " "))));
+      setValidating(false);
+      return;
+    }
+
+    // 2) Listen for the PASSWORD_RECOVERY event (implicit flow — hash tokens).
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (cancelled) return;
       if (event === "PASSWORD_RECOVERY") {
         setReady(true);
         setError(null);
+        setValidating(false);
       }
     });
 
-    // If arriving with an existing session (e.g. token already parsed), allow.
-    supabase.auth.getSession().then(({ data }) => {
-      const hash = typeof window !== "undefined" ? window.location.hash : "";
-      if (data.session && hash.includes("type=recovery")) setReady(true);
-    });
+    (async () => {
+      // 3) PKCE flow: ?code=... — exchange for a session.
+      const code = queryParams.get("code");
+      if (code) {
+        const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (exErr) {
+          setError(mapAuthError(exErr.message));
+          setValidating(false);
+          return;
+        }
+        setReady(true);
+        setValidating(false);
+        return;
+      }
 
-    // Detect error in hash (expired link, etc.)
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      const err = params.get("error_description") ?? params.get("error");
-      if (err) setError(decodeURIComponent(err.replace(/\+/g, " ")));
-    }
+      // 4) token_hash flow (?token_hash=&type=recovery).
+      const tokenHash = queryParams.get("token_hash") ?? hashParams.get("token_hash");
+      const type = queryParams.get("type") ?? hashParams.get("type");
+      if (tokenHash && type === "recovery") {
+        const { error: vErr } = await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash });
+        if (cancelled) return;
+        if (vErr) {
+          setError(mapAuthError(vErr.message));
+          setValidating(false);
+          return;
+        }
+        setReady(true);
+        setValidating(false);
+        return;
+      }
 
-    // Grace window: if no recovery event within 1.5s and no session, mark as invalid link.
-    const t = window.setTimeout(async () => {
+      // 5) Implicit flow — tokens already in hash; Supabase parses them automatically.
+      //    Give it a brief grace window, then check the session.
+      await new Promise((r) => setTimeout(r, 1200));
+      if (cancelled) return;
       const { data } = await supabase.auth.getSession();
-      if (!data.session) setError((e) => e ?? "Link inválido ou expirado. Solicite um novo.");
-    }, 1500);
+      if (cancelled) return;
+      if (data.session && (hash.includes("type=recovery") || hashParams.get("access_token"))) {
+        setReady(true);
+        setValidating(false);
+        return;
+      }
+      if (!ready) {
+        setError("Link de recuperação inválido ou expirado. Solicite um novo.");
+        setValidating(false);
+      }
+    })();
 
     return () => {
+      cancelled = true;
       sub.subscription.unsubscribe();
-      window.clearTimeout(t);
     };
   }, []);
 
@@ -86,7 +142,14 @@ function ResetPasswordPage() {
       await signOutGlobal();
       navigate({ to: "/entrar", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao atualizar senha");
+      const msg = err instanceof Error ? err.message : "Falha ao atualizar senha";
+      const s = msg.toLowerCase();
+      if (s.includes("session") || s.includes("jwt") || s.includes("expired")) {
+        setError("Sua sessão de recuperação expirou. Solicite um novo link.");
+        setReady(false);
+      } else {
+        toast.error(mapAuthError(msg));
+      }
     } finally {
       setLoading(false);
     }
@@ -105,18 +168,27 @@ function ResetPasswordPage() {
             Escolha uma nova senha para acessar sua conta.
           </p>
 
-          {error ? (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-lg bg-destructive/10 text-destructive p-4 text-sm">
-                {error}
-              </div>
-              <Button asChild className="w-full">
-                <Link to="/esqueci-senha">Solicitar novo link</Link>
-              </Button>
+          {validating ? (
+            <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+              Validando link de recuperação...
             </div>
-          ) : !ready ? (
-            <div className="mt-6 text-sm text-muted-foreground">Validando link...</div>
-          ) : (
+          ) : error ? (
+            <div className="mt-6 space-y-4">
+              <div className="rounded-lg bg-destructive/10 text-destructive p-4 text-sm space-y-1">
+                <p className="font-semibold">Não foi possível validar o link</p>
+                <p>{error}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button asChild variant="outline">
+                  <Link to="/entrar">Voltar ao login</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/esqueci-senha">Solicitar novo link</Link>
+                </Button>
+              </div>
+            </div>
+          ) : ready ? (
             <form onSubmit={handleSubmit} className="space-y-3 mt-5">
               <div className="space-y-1.5">
                 <Label htmlFor="password">Nova senha</Label>
