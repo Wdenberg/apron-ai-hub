@@ -64,8 +64,8 @@ async def scenario_missing_token(context):
     print("scenario: missing token")
     page = await context.new_page()
     await page.goto(f"{BASE}/reset-password", wait_until="domcontentloaded")
-    # grace window is 1.2s; wait slightly longer
-    await page.wait_for_timeout(2000)
+    # grace window is 1.2s; getSession() can add latency — wait comfortably longer
+    await page.wait_for_timeout(3500)
     await page.screenshot(path=str(SHOTS / "1_missing.png"))
     ok = await expect_message(page, "inválido ou expirado", "missing token message")
     await page.close()
