@@ -202,7 +202,7 @@ function ResetPasswordPage() {
                 {loading ? "Salvando..." : "Salvar nova senha"}
               </Button>
             </form>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
