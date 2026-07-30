@@ -208,13 +208,89 @@ function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-3 mt-5">
               <div className="space-y-1.5">
                 <Label htmlFor="password">Nova senha</Label>
-                <Input id="password" name="password" type="password" autoComplete="new-password" minLength={6} required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
+                  aria-invalid={password.length > 0 && !strength.valid}
+                  aria-describedby="password-rules"
+                  required
+                />
+                {password.length > 0 && (
+                  <div className="space-y-2 pt-1" id="password-rules">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          data-testid="strength-bar"
+                          className={`h-full transition-all duration-300 ${
+                            strength.score <= 1
+                              ? "bg-destructive"
+                              : strength.score === 2
+                                ? "bg-yellow-500"
+                                : "bg-emerald-600"
+                          }`}
+                          style={{ width: `${((strength.score + 1) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">{strength.label}</span>
+                    </div>
+                    <ul className="grid gap-1 text-xs">
+                      {passwordRules.map((rule) => {
+                        const ok = rule.test(password);
+                        return (
+                          <li
+                            key={rule.id}
+                            data-testid={`rule-${rule.id}`}
+                            data-ok={ok}
+                            className={`flex items-center gap-1.5 ${ok ? "text-emerald-600" : "text-muted-foreground"}`}
+                          >
+                            {ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                            {rule.label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {!strength.valid && strength.failed.length === 0 && strength.error && (
+                      <p role="alert" className="text-xs text-destructive">{strength.error}</p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="confirm">Confirmar senha</Label>
-                <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={6} required />
+                <Input
+                  id="confirm"
+                  name="confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
+                  value={confirm}
+                  onChange={(e) => { setConfirm(e.target.value); setFormError(null); }}
+                  aria-invalid={mismatch}
+                  required
+                />
+                {mismatch && (
+                  <p role="alert" className="text-xs text-destructive">As senhas não coincidem</p>
+                )}
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {formError && (
+                <div role="alert" className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm">
+                  {formError}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Use de {PASSWORD_MIN} a {PASSWORD_MAX} caracteres, sem espaços.
+              </p>
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading || !strength.valid || mismatch || confirm.length === 0}
+              >
                 {loading ? "Salvando..." : "Salvar nova senha"}
               </Button>
             </form>
