@@ -39,6 +39,28 @@ export function clearTourState(userId?: string | null) {
 }
 
 /**
+ * Remove o estado do tour de TODAS as versões para o usuário informado.
+ * Usado por "Ver tutorial novamente" para reiniciar sempre do começo,
+ * já alinhado com a versão atual do tour.
+ */
+export function clearAllTourStates(userId?: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    const suffix = `:${userId ?? "anon"}`;
+    const keys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(STORAGE_PREFIX) && key.endsWith(suffix)) {
+        keys.push(key);
+      }
+    }
+    keys.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* noop */
+  }
+}
+
+/**
  * Etapas do onboarding. Todos os alvos vivem no AppShell,
  * então o tour funciona em qualquer página autenticada.
  */
