@@ -241,3 +241,42 @@
     white-space: pre-wrap;
   }
 }
+
+/* Onboarding tour (driver.js) — usa tokens do design system */
+.driver-popover.pp-tour-popover {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px -12px hsl(var(--foreground) / 0.25);
+  max-width: 22rem;
+}
+.driver-popover.pp-tour-popover .driver-popover-title { font-size: 1rem; font-weight: 700; }
+.driver-popover.pp-tour-popover .driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.4rem;
+}
+.driver-popover.pp-tour-popover .driver-popover-progress-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.driver-popover.pp-tour-popover .driver-popover-navigation-btns button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: 0.625rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-shadow: none;
+}
+.driver-popover.pp-tour-popover .driver-popover-navigation-btns button.driver-popover-prev-btn {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.driver-popover.pp-tour-popover .driver-popover-arrow-side-left { border-left-color: hsl(var(--card)); }
+.driver-popover.pp-tour-popover .driver-popover-arrow-side-right { border-right-color: hsl(var(--card)); }
+.driver-popover.pp-tour-popover .driver-popover-arrow-side-top { border-top-color: hsl(var(--card)); }
+.driver-popover.pp-tour-popover .driver-popover-arrow-side-bottom { border-bottom-color: hsl(var(--card)); }
