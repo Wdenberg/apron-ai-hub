@@ -56,13 +56,14 @@ async def main() -> int:
         page = await context.new_page()
 
         await page.goto(f"{BASE}/esqueci-senha", wait_until="domcontentloaded")
+        await page.wait_for_timeout(2000)  # dev-server module compile
         await page.evaluate(f"window.localStorage.removeItem({json.dumps(STORAGE_KEY)})")
 
         # 1) first request goes through
         await page.get_by_label("E-mail").fill("lojista@example.com")
         await page.get_by_role("button", name="Enviar link de recuperação").click()
         resend = page.get_by_role("button", name="Reenviar", exact=False)
-        await resend.wait_for(state="visible", timeout=10000)
+        await resend.wait_for(state="visible", timeout=25000)
         await page.screenshot(path=str(SHOTS / "1_sent.png"))
         checks.append(("first request sent", calls.count("recover") == 1))
 
@@ -83,6 +84,7 @@ async def main() -> int:
             [STORAGE_KEY, json.dumps({"attempts": sorted(attempts)})],
         )
         await page.reload(wait_until="domcontentloaded")
+        await page.wait_for_timeout(1500)
         await page.get_by_label("E-mail").fill("lojista@example.com")
         await page.get_by_role("button", name="Enviar link de recuperação").click()
         await page.wait_for_timeout(600)
