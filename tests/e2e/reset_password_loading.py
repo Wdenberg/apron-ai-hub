@@ -105,8 +105,8 @@ async def main() -> int:
 
         pwd = page.get_by_label("Nova senha")
         await pwd.wait_for(state="visible", timeout=15000)
-        await pwd.fill("novaSenha123")
-        await page.get_by_label("Confirmar senha").fill("novaSenha123")
+        await pwd.fill("Chuvisco#2026")
+        await page.get_by_label("Confirmar senha").fill("Chuvisco#2026")
 
         submit = page.get_by_role("button", name="Salvar nova senha")
         checks.append(("submit enabled before sending", await submit.is_enabled()))
