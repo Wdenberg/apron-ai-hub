@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { sendPasswordResetEmail } from "@/services/authService";
+import {
+  checkResetRateLimit,
+  registerResetAttempt,
+  formatRetryDelay,
+} from "@/lib/resetRateLimit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +28,24 @@ const schema = z.object({ email: z.string().trim().email("E-mail inválido").max
 function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [retryInMs, setRetryInMs] = useState(0);
+  const [limitMsg, setLimitMsg] = useState<string | null>(null);
+
+  // Countdown tick while the send is throttled/blocked.
+  useEffect(() => {
+    if (retryInMs <= 0) return;
+    const id = window.setInterval(() => {
+      setRetryInMs((ms) => {
+        const next = ms - 1000;
+        if (next <= 0) {
+          setLimitMsg(null);
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [retryInMs > 0]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,8 +55,21 @@ function ForgotPasswordPage() {
       toast.error(parsed.error.issues[0]?.message ?? "E-mail inválido");
       return;
     }
+    const limit = checkResetRateLimit();
+    if (!limit.allowed) {
+      const wait = formatRetryDelay(limit.retryInMs);
+      const msg =
+        limit.reason === "blocked"
+          ? `Muitas tentativas de recuperação. Tente novamente em ${wait}.`
+          : `Aguarde ${wait} para solicitar um novo link.`;
+      setRetryInMs(limit.retryInMs);
+      setLimitMsg(msg);
+      toast.error(msg);
+      return;
+    }
     setLoading(true);
     try {
+      registerResetAttempt();
       await sendPasswordResetEmail(
         parsed.data.email,
         window.location.origin + "/reset-password",
@@ -41,10 +77,31 @@ function ForgotPasswordPage() {
       setSent(true);
       toast.success("Se o e-mail existir, enviaremos as instruções.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao enviar e-mail");
+      const msg = err instanceof Error ? err.message : "Falha ao enviar e-mail";
+      toast.error(
+        /rate limit|too many|429/i.test(msg)
+          ? "Muitas solicitações. Aguarde alguns minutos e tente novamente."
+          : msg,
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleResend() {
+    const limit = checkResetRateLimit();
+    if (!limit.allowed) {
+      const wait = formatRetryDelay(limit.retryInMs);
+      const msg =
+        limit.reason === "blocked"
+          ? `Muitas tentativas de recuperação. Tente novamente em ${wait}.`
+          : `Aguarde ${wait} para solicitar um novo link.`;
+      setRetryInMs(limit.retryInMs);
+      setLimitMsg(msg);
+      toast.error(msg);
+      return;
+    }
+    setSent(false);
   }
 
   return (
@@ -66,6 +123,25 @@ function ForgotPasswordPage() {
                 Se o e-mail estiver cadastrado, você receberá um link em instantes.
                 Verifique também sua caixa de spam.
               </div>
+              {limitMsg ? (
+                <div
+                  role="alert"
+                  className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm"
+                >
+                  {limitMsg}
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleResend}
+                disabled={retryInMs > 0}
+              >
+                {retryInMs > 0
+                  ? `Reenviar em ${formatRetryDelay(retryInMs)}`
+                  : "Reenviar link"}
+              </Button>
               <Button asChild variant="outline" className="w-full">
                 <Link to="/entrar">Voltar para o login</Link>
               </Button>
@@ -76,8 +152,25 @@ function ForgotPasswordPage() {
                 <Label htmlFor="email">E-mail</Label>
                 <Input id="email" name="email" type="email" autoComplete="email" required />
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? "Enviando..." : "Enviar link de recuperação"}
+              {limitMsg ? (
+                <div
+                  role="alert"
+                  className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm"
+                >
+                  {limitMsg}
+                </div>
+              ) : null}
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading || retryInMs > 0}
+              >
+                {loading
+                  ? "Enviando..."
+                  : retryInMs > 0
+                    ? `Aguarde ${formatRetryDelay(retryInMs)}`
+                    : "Enviar link de recuperação"}
               </Button>
             </form>
           )}
