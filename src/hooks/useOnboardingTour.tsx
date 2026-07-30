@@ -5,13 +5,14 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { driver, type Driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 import { useSession } from "@/hooks/use-session";
 import {
-  clearTourState,
+  clearAllTourStates,
   getTourState,
   setTourState,
   tourSteps,
@@ -65,6 +66,11 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   const driverRef = useRef<Driver | null>(null);
   const autoStartedRef = useRef(false);
+  const [seen, setSeen] = useState(false);
+
+  useEffect(() => {
+    setSeen(!!getTourState(userId));
+  }, [userId]);
 
   const destroy = useCallback(() => {
     driverRef.current?.destroy();
@@ -99,6 +105,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
           const isLast = !instance.hasNextStep();
           if (opts.markOnFinish) {
             setTourState(userId, isLast ? "completed" : "skipped");
+            setSeen(true);
           }
           instance.destroy();
         },
@@ -108,7 +115,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
       });
 
       driverRef.current = instance;
-      instance.drive();
+      instance.drive(0);
     },
     [destroy, userId],
   );
@@ -124,13 +131,16 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   useEffect(() => destroy, [destroy]);
 
   const startTour = useCallback(() => {
-    clearTourState(userId);
+    // Zera o estado de todas as versões e reexecuta desde a primeira etapa.
+    clearAllTourStates(userId);
+    setSeen(false);
+    destroy();
     void run({ markOnFinish: true });
-  }, [run, userId]);
+  }, [destroy, run, userId]);
 
   const value = useMemo(
-    () => ({ startTour, hasSeenTour: !!getTourState(userId) }),
-    [startTour, userId],
+    () => ({ startTour, hasSeenTour: seen }),
+    [startTour, seen],
   );
 
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
