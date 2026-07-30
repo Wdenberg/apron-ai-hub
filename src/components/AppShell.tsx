@@ -14,6 +14,7 @@ import {
   CreditCard,
   UserCircle,
   ChevronDown,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useMyStoreShell } from "@/hooks/useStore";
 import { useSignOut } from "@/hooks/useAuth";
 import { ShieldCheck } from "lucide-react";
+import { OnboardingTourProvider, useOnboardingTour } from "@/hooks/useOnboardingTour";
 
 /**
  * Minimal outline cash register icon (matches lucide stroke weight/size).
@@ -50,17 +52,18 @@ type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon | ((p: { className?: string }) => ReactElement);
+  tourId?: string;
 };
 
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Gestão e operação",
     items: [
-      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
-      { to: "/produtos", label: "Produtos", icon: Package },
-      { to: "/vendas", label: "Venda rápida", icon: CashRegister },
-      { to: "/clientes", label: "Clientes", icon: Users },
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tourId: "nav-dashboard" },
+      { to: "/pedidos", label: "Pedidos", icon: ClipboardList, tourId: "nav-pedidos" },
+      { to: "/produtos", label: "Produtos", icon: Package, tourId: "nav-produtos" },
+      { to: "/vendas", label: "Venda rápida", icon: CashRegister, tourId: "nav-vendas" },
+      { to: "/clientes", label: "Clientes", icon: Users, tourId: "nav-clientes" },
     ],
   },
   {
@@ -70,7 +73,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Administração",
     items: [
-      { to: "/configuracoes", label: "Configurações", icon: Settings },
+      { to: "/configuracoes", label: "Configurações", icon: Settings, tourId: "nav-configuracoes" },
       { to: "/assinatura", label: "Assinatura", icon: CreditCard },
       { to: "/perfil", label: "Meu perfil", icon: UserCircle },
     ],
@@ -86,6 +89,14 @@ function getInitials(name?: string | null) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <OnboardingTourProvider>
+      <AppShellInner>{children}</AppShellInner>
+    </OnboardingTourProvider>
+  );
+}
+
+function AppShellInner({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const isAdmin = useIsAdmin();
@@ -127,6 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               to="/loja/$slug"
               params={{ slug: store.slug }}
+              data-tour="store-link"
               className="text-xs sm:text-sm text-muted-foreground hover:text-primary underline underline-offset-4"
             >
               Ver loja pública
@@ -161,6 +173,7 @@ function SidebarInner({
   onClose?: () => void;
 }) {
   const initials = getInitials(storeName);
+  const { startTour } = useOnboardingTour();
   return (
     <>
       <div className="h-16 flex items-center px-5 border-b border-border justify-between">
@@ -188,12 +201,13 @@ function SidebarInner({
               {group.title}
             </div>
             <ul className="space-y-1">
-              {group.items.map(({ to, label, icon: Icon }) => {
+              {group.items.map(({ to, label, icon: Icon, tourId }) => {
                 const active = pathname === to || pathname.startsWith(to + "/");
                 return (
                   <li key={to}>
                     <a
                       href={to}
+                      data-tour={tourId}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
@@ -221,6 +235,22 @@ function SidebarInner({
         ))}
       </nav>
       <div className="border-t border-border p-3 space-y-1">
+        <button
+          type="button"
+          data-tour="restart-tour"
+          onClick={() => {
+            onClose?.();
+            startTour();
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+            "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+        >
+          <HelpCircle className="h-[18px] w-[18px] text-muted-foreground" />
+          Ver tutorial novamente
+        </button>
         <button
           type="button"
           className="w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
