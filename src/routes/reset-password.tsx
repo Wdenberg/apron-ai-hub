@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Check, X } from "lucide-react";
+import {
+  evaluatePassword,
+  passwordRules,
+  PASSWORD_MIN,
+  PASSWORD_MAX,
+} from "@/lib/passwordPolicy";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -20,7 +26,13 @@ export const Route = createFileRoute("/reset-password")({
 });
 
 const schema = z.object({
-  password: z.string().min(6, "Mínimo 6 caracteres").max(72),
+  password: z
+    .string()
+    .max(PASSWORD_MAX, `A senha deve ter no máximo ${PASSWORD_MAX} caracteres`)
+    .superRefine((v, ctx) => {
+      const res = evaluatePassword(v);
+      if (!res.valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res.error! });
+    }),
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, {
   message: "As senhas não coincidem",
@@ -33,6 +45,11 @@ function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(true);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const strength = evaluatePassword(password);
+  const mismatch = confirm.length > 0 && confirm !== password;
 
   function mapAuthError(raw: string): string {
     const s = raw.toLowerCase();
@@ -126,15 +143,14 @@ function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const parsed = schema.safeParse({
-      password: fd.get("password"),
-      confirm: fd.get("confirm"),
-    });
+    const parsed = schema.safeParse({ password, confirm });
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
+      const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
+    setFormError(null);
     setLoading(true);
     try {
       await updateUserPassword(parsed.data.password);
