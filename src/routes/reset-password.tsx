@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Check, X } from "lucide-react";
+import {
+  evaluatePassword,
+  passwordRules,
+  PASSWORD_MIN,
+  PASSWORD_MAX,
+} from "@/lib/passwordPolicy";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -20,7 +26,13 @@ export const Route = createFileRoute("/reset-password")({
 });
 
 const schema = z.object({
-  password: z.string().min(6, "Mínimo 6 caracteres").max(72),
+  password: z
+    .string()
+    .max(PASSWORD_MAX, `A senha deve ter no máximo ${PASSWORD_MAX} caracteres`)
+    .superRefine((v, ctx) => {
+      const res = evaluatePassword(v);
+      if (!res.valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res.error! });
+    }),
   confirm: z.string(),
 }).refine((d) => d.password === d.confirm, {
   message: "As senhas não coincidem",
@@ -33,6 +45,11 @@ function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(true);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const strength = evaluatePassword(password);
+  const mismatch = confirm.length > 0 && confirm !== password;
 
   function mapAuthError(raw: string): string {
     const s = raw.toLowerCase();
@@ -126,15 +143,14 @@ function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const parsed = schema.safeParse({
-      password: fd.get("password"),
-      confirm: fd.get("confirm"),
-    });
+    const parsed = schema.safeParse({ password, confirm });
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
+      const msg = parsed.error.issues[0]?.message ?? "Dados inválidos";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
+    setFormError(null);
     setLoading(true);
     try {
       await updateUserPassword(parsed.data.password);
@@ -192,13 +208,89 @@ function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-3 mt-5">
               <div className="space-y-1.5">
                 <Label htmlFor="password">Nova senha</Label>
-                <Input id="password" name="password" type="password" autoComplete="new-password" minLength={6} required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
+                  aria-invalid={password.length > 0 && !strength.valid}
+                  aria-describedby="password-rules"
+                  required
+                />
+                {password.length > 0 && (
+                  <div className="space-y-2 pt-1" id="password-rules">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          data-testid="strength-bar"
+                          className={`h-full transition-all duration-300 ${
+                            strength.score <= 1
+                              ? "bg-destructive"
+                              : strength.score === 2
+                                ? "bg-yellow-500"
+                                : "bg-emerald-600"
+                          }`}
+                          style={{ width: `${((strength.score + 1) / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">{strength.label}</span>
+                    </div>
+                    <ul className="grid gap-1 text-xs">
+                      {passwordRules.map((rule) => {
+                        const ok = rule.test(password);
+                        return (
+                          <li
+                            key={rule.id}
+                            data-testid={`rule-${rule.id}`}
+                            data-ok={ok}
+                            className={`flex items-center gap-1.5 ${ok ? "text-emerald-600" : "text-muted-foreground"}`}
+                          >
+                            {ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                            {rule.label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {!strength.valid && strength.failed.length === 0 && strength.error && (
+                      <p role="alert" className="text-xs text-destructive">{strength.error}</p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="confirm">Confirmar senha</Label>
-                <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={6} required />
+                <Input
+                  id="confirm"
+                  name="confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  maxLength={PASSWORD_MAX}
+                  value={confirm}
+                  onChange={(e) => { setConfirm(e.target.value); setFormError(null); }}
+                  aria-invalid={mismatch}
+                  required
+                />
+                {mismatch && (
+                  <p role="alert" className="text-xs text-destructive">As senhas não coincidem</p>
+                )}
               </div>
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {formError && (
+                <div role="alert" className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm">
+                  {formError}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Use de {PASSWORD_MIN} a {PASSWORD_MAX} caracteres, sem espaços.
+              </p>
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={loading || !strength.valid || mismatch || confirm.length === 0}
+              >
                 {loading ? "Salvando..." : "Salvar nova senha"}
               </Button>
             </form>

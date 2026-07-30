@@ -118,8 +118,8 @@ async def main() -> int:
         checks.append(("verify endpoint called", "verify" in calls))
 
         # 2) submit the new password
-        await pwd.fill("novaSenha123")
-        await page.get_by_label("Confirmar senha").fill("novaSenha123")
+        await pwd.fill("Chuvisco#2026")
+        await page.get_by_label("Confirmar senha").fill("Chuvisco#2026")
         await page.get_by_role("button", name="Salvar nova senha").click()
 
         # 3) success toast
