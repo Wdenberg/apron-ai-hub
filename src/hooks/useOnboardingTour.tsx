@@ -105,6 +105,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
           const isLast = !instance.hasNextStep();
           if (opts.markOnFinish) {
             setTourState(userId, isLast ? "completed" : "skipped");
+            setSeen(true);
           }
           instance.destroy();
         },
